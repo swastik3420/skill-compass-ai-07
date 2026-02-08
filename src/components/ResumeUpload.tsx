@@ -1,18 +1,25 @@
 import { useState, useCallback } from "react";
-import { Upload, FileText, X, CheckCircle, Loader2 } from "lucide-react";
+import { Upload, FileText, X, CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { parseResume, extractTextFromPdf, type ParsedResume } from "@/lib/api/career";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ResumeUploadProps {
   onFileUploaded: (file: File) => void;
   onStartAssessment: () => void;
+  onResumeAnalyzed?: (data: ParsedResume) => void;
 }
 
-const ResumeUpload = ({ onFileUploaded, onStartAssessment }: ResumeUploadProps) => {
+const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: ResumeUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [parsedData, setParsedData] = useState<ParsedResume | null>(null);
+  const { toast } = useToast();
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -42,22 +49,59 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment }: ResumeUploadProps) 
     }
   };
 
-  const processFile = (uploadedFile: File) => {
+  const processFile = async (uploadedFile: File) => {
     setFile(uploadedFile);
     setIsProcessing(true);
+    setError(null);
+    setProcessingStatus("Extracting text from PDF...");
     
-    // Simulate processing
-    setTimeout(() => {
+    try {
+      // Extract text from PDF
+      const resumeText = await extractTextFromPdf(uploadedFile);
+      console.log('Extracted resume text, length:', resumeText.length);
+      
+      setProcessingStatus("Analyzing your resume with AI...");
+      
+      // Parse the resume with AI
+      const result = await parseResume(resumeText);
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to analyze resume');
+      }
+      
+      console.log('Resume parsed successfully:', result.data);
+      setParsedData(result.data);
       setIsProcessing(false);
       setIsReady(true);
+      setProcessingStatus("");
       onFileUploaded(uploadedFile);
-    }, 2000);
+      onResumeAnalyzed?.(result.data);
+      
+      toast({
+        title: "Resume Analyzed!",
+        description: `Found ${result.data.skills.length} skills across ${result.data.skills.map(s => s.category).filter((v, i, a) => a.indexOf(v) === i).length} categories.`,
+      });
+    } catch (err) {
+      console.error('Error processing file:', err);
+      setIsProcessing(false);
+      setError(err instanceof Error ? err.message : 'Failed to process resume');
+      setProcessingStatus("");
+      
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to process resume',
+        variant: "destructive",
+      });
+    }
   };
 
   const removeFile = () => {
     setFile(null);
     setIsReady(false);
     setIsProcessing(false);
+    setError(null);
+    setParsedData(null);
+    setProcessingStatus("");
   };
 
   return (
@@ -148,7 +192,7 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment }: ResumeUploadProps) 
                         {file.name}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {isProcessing ? "Analyzing..." : isReady ? "Ready for assessment" : ""}
+                        {isProcessing ? processingStatus || "Processing..." : isReady ? `${parsedData?.skills.length || 0} skills found` : error ? "Error" : ""}
                       </p>
                     </div>
                   </div>

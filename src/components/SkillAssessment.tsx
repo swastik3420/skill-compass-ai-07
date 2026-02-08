@@ -1,98 +1,65 @@
-import { useState } from "react";
-import { ChevronRight, Clock, Brain, CheckCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronRight, Clock, Brain, CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
-
-interface Question {
-  id: number;
-  skill: string;
-  difficulty: "Basic" | "Intermediate" | "Advanced";
-  question: string;
-  options: string[];
-  correctAnswer: number;
-}
-
-const mockQuestions: Question[] = [
-  {
-    id: 1,
-    skill: "JavaScript",
-    difficulty: "Basic",
-    question: "What is the difference between 'let' and 'const' in JavaScript?",
-    options: [
-      "'let' allows reassignment while 'const' does not",
-      "'const' is faster than 'let'",
-      "There is no difference",
-      "'let' is for numbers, 'const' is for strings"
-    ],
-    correctAnswer: 0
-  },
-  {
-    id: 2,
-    skill: "React",
-    difficulty: "Intermediate",
-    question: "What hook would you use to perform side effects in a functional component?",
-    options: [
-      "useState",
-      "useReducer",
-      "useEffect",
-      "useMemo"
-    ],
-    correctAnswer: 2
-  },
-  {
-    id: 3,
-    skill: "TypeScript",
-    difficulty: "Intermediate",
-    question: "What is the purpose of generics in TypeScript?",
-    options: [
-      "To make code run faster",
-      "To create reusable components that work with multiple types",
-      "To add comments to code",
-      "To compile TypeScript to JavaScript"
-    ],
-    correctAnswer: 1
-  },
-  {
-    id: 4,
-    skill: "Node.js",
-    difficulty: "Advanced",
-    question: "What is the Event Loop in Node.js?",
-    options: [
-      "A loop that handles user input",
-      "A mechanism that handles asynchronous callbacks",
-      "A type of for loop",
-      "A way to create animations"
-    ],
-    correctAnswer: 1
-  },
-  {
-    id: 5,
-    skill: "SQL",
-    difficulty: "Basic",
-    question: "Which SQL command is used to retrieve data from a database?",
-    options: [
-      "GET",
-      "FETCH",
-      "SELECT",
-      "RETRIEVE"
-    ],
-    correctAnswer: 2
-  }
-];
+import { generateQuestions, type ParsedResume, type Question } from "@/lib/api/career";
+import { useToast } from "@/components/ui/use-toast";
 
 interface SkillAssessmentProps {
   onComplete: (results: { skill: string; score: number; level: string }[]) => void;
+  parsedResume: ParsedResume;
 }
 
-const SkillAssessment = ({ onComplete }: SkillAssessmentProps) => {
+const SkillAssessment = ({ onComplete, parsedResume }: SkillAssessmentProps) => {
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answers, setAnswers] = useState<number[]>([]);
   const [showFeedback, setShowFeedback] = useState(false);
+  const { toast } = useToast();
 
-  const question = mockQuestions[currentQuestion];
-  const progress = ((currentQuestion + 1) / mockQuestions.length) * 100;
+  useEffect(() => {
+    loadQuestions();
+  }, [parsedResume]);
+
+  const loadQuestions = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log('Generating questions for skills:', parsedResume.skills);
+      const result = await generateQuestions(parsedResume.skills, parsedResume.experienceLevel);
+
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to generate questions');
+      }
+
+      console.log('Generated questions:', result.data);
+      setQuestions(result.data);
+      setIsLoading(false);
+
+      toast({
+        title: "Questions Ready!",
+        description: `${result.data.length} personalized questions generated based on your resume.`,
+      });
+    } catch (err) {
+      console.error('Error loading questions:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate questions');
+      setIsLoading(false);
+
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to generate questions',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const question = questions[currentQuestion];
+  const progress = questions.length > 0 ? ((currentQuestion + 1) / questions.length) * 100 : 0;
 
   const handleAnswerSelect = (index: number) => {
     if (showFeedback) return;
@@ -107,14 +74,14 @@ const SkillAssessment = ({ onComplete }: SkillAssessmentProps) => {
     setShowFeedback(true);
 
     setTimeout(() => {
-      if (currentQuestion < mockQuestions.length - 1) {
+      if (currentQuestion < questions.length - 1) {
         setCurrentQuestion(currentQuestion + 1);
         setSelectedAnswer(null);
         setShowFeedback(false);
       } else {
         // Calculate results
         const skillScores: Record<string, { correct: number; total: number }> = {};
-        mockQuestions.forEach((q, i) => {
+        questions.forEach((q, i) => {
           if (!skillScores[q.skill]) {
             skillScores[q.skill] = { correct: 0, total: 0 };
           }
@@ -147,6 +114,75 @@ const SkillAssessment = ({ onComplete }: SkillAssessmentProps) => {
     }
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <section className="py-20 min-h-screen">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-card rounded-2xl shadow-lg p-12"
+            >
+              <div className="w-20 h-20 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Loader2 className="w-10 h-10 text-primary-foreground animate-spin" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-4">
+                Generating Your Assessment
+              </h3>
+              <p className="text-muted-foreground mb-6">
+                Our AI is creating personalized questions based on the {parsedResume.skills.length} skills found in your resume...
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {parsedResume.skills.slice(0, 8).map((skill, i) => (
+                  <span key={i} className="px-3 py-1 bg-secondary/20 text-secondary rounded-full text-sm">
+                    {skill.name}
+                  </span>
+                ))}
+                {parsedResume.skills.length > 8 && (
+                  <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm">
+                    +{parsedResume.skills.length - 8} more
+                  </span>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Error state
+  if (error || questions.length === 0) {
+    return (
+      <section className="py-20 min-h-screen">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-card rounded-2xl shadow-lg p-12"
+            >
+              <div className="w-20 h-20 bg-destructive/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <AlertCircle className="w-10 h-10 text-destructive" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-4">
+                Failed to Generate Questions
+              </h3>
+              <p className="text-muted-foreground mb-6">
+                {error || 'No questions were generated. Please try again.'}
+              </p>
+              <Button variant="hero" onClick={loadQuestions}>
+                Try Again
+              </Button>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-20 min-h-screen">
       <div className="container mx-auto px-4">
@@ -156,7 +192,7 @@ const SkillAssessment = ({ onComplete }: SkillAssessmentProps) => {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Brain className="w-5 h-5" />
-                <span>Question {currentQuestion + 1} of {mockQuestions.length}</span>
+                <span>Question {currentQuestion + 1} of {questions.length}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="w-5 h-5" />
@@ -230,6 +266,19 @@ const SkillAssessment = ({ onComplete }: SkillAssessmentProps) => {
                 })}
               </div>
 
+              {/* Show explanation after feedback */}
+              {showFeedback && question.explanation && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-4 bg-secondary/10 rounded-xl border border-secondary/20"
+                >
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">Explanation:</span> {question.explanation}
+                  </p>
+                </motion.div>
+              )}
+
               <div className="flex justify-end">
                 <Button
                   variant="hero"
@@ -237,7 +286,7 @@ const SkillAssessment = ({ onComplete }: SkillAssessmentProps) => {
                   onClick={handleNext}
                   disabled={selectedAnswer === null || showFeedback}
                 >
-                  {currentQuestion < mockQuestions.length - 1 ? "Next Question" : "See Results"}
+                  {currentQuestion < questions.length - 1 ? "Next Question" : "See Results"}
                   <ChevronRight className="w-5 h-5" />
                 </Button>
               </div>

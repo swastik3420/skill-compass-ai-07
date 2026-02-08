@@ -6,6 +6,8 @@ import SkillAssessment from "@/components/SkillAssessment";
 import Results from "@/components/Results";
 import Features from "@/components/Features";
 import Footer from "@/components/Footer";
+import { Toaster } from "@/components/ui/toaster";
+import { type ParsedResume } from "@/lib/api/career";
 
 type AppState = "landing" | "upload" | "assessment" | "results";
 
@@ -19,6 +21,7 @@ const Index = () => {
   const [appState, setAppState] = useState<AppState>("landing");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [assessmentResults, setAssessmentResults] = useState<SkillResult[]>([]);
+  const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
 
   const handleGetStarted = () => {
     setAppState("upload");
@@ -30,6 +33,10 @@ const Index = () => {
 
   const handleFileUploaded = (file: File) => {
     setUploadedFile(file);
+  };
+
+  const handleResumeAnalyzed = (data: ParsedResume) => {
+    setParsedResume(data);
   };
 
   const handleStartAssessment = () => {
@@ -47,6 +54,7 @@ const Index = () => {
     setAppState("landing");
     setUploadedFile(null);
     setAssessmentResults([]);
+    setParsedResume(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -65,11 +73,15 @@ const Index = () => {
         <ResumeUpload 
           onFileUploaded={handleFileUploaded}
           onStartAssessment={handleStartAssessment}
+          onResumeAnalyzed={handleResumeAnalyzed}
         />
       )}
 
-      {appState === "assessment" && (
-        <SkillAssessment onComplete={handleAssessmentComplete} />
+      {appState === "assessment" && parsedResume && (
+        <SkillAssessment 
+          onComplete={handleAssessmentComplete}
+          parsedResume={parsedResume}
+        />
       )}
 
       {appState === "results" && (
@@ -77,6 +89,7 @@ const Index = () => {
       )}
 
       <Footer />
+      <Toaster />
     </div>
   );
 };
