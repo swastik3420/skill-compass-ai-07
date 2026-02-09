@@ -85,7 +85,11 @@ const Index = () => {
       )}
 
       {appState === "results" && (
-        <Results results={assessmentResults} onRestart={handleRestart} />
+        <Results 
+          results={assessmentResults} 
+          onRestart={handleRestart}
+          parsedResume={parsedResume}
+        />
       )}
 
       <Footer />
