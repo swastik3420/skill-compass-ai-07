@@ -1,7 +1,12 @@
-import { TrendingUp, Briefcase, BookOpen, Award, ArrowRight, Star, MapPin, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { TrendingUp, Briefcase, BookOpen, Award, ArrowRight, Star, MapPin, Clock, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import type { ParsedResume } from "@/lib/api/career";
 
 interface SkillResult {
   skill: string;
@@ -59,10 +64,60 @@ const suggestedSkills = [
 interface ResultsProps {
   results: SkillResult[];
   onRestart: () => void;
+  parsedResume?: ParsedResume | null;
 }
 
-const Results = ({ results, onRestart }: ResultsProps) => {
+const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
   const overallScore = Math.round(results.reduce((sum, r) => sum + r.score, 0) / results.length);
+
+  const saveResults = async () => {
+    if (!user) {
+      toast({
+        title: "Sign in to save",
+        description: "Create an account to save your assessment results.",
+      });
+      navigate("/auth");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('assessment_results')
+        .insert([{
+          user_id: user.id,
+          skills: JSON.parse(JSON.stringify(parsedResume?.skills || [])),
+          experience_level: parsedResume?.experienceLevel || null,
+          summary: parsedResume?.summary || null,
+          job_titles: parsedResume?.jobTitles || [],
+          industries: parsedResume?.industries || [],
+          assessment_scores: JSON.parse(JSON.stringify(results)),
+        }]);
+
+      if (error) throw error;
+
+      setIsSaved(true);
+      toast({
+        title: "Results saved!",
+        description: "Your assessment has been saved to your dashboard.",
+      });
+    } catch (err) {
+      console.error('Error saving results:', err);
+      toast({
+        title: "Error",
+        description: "Failed to save results. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-success";
@@ -96,6 +151,59 @@ const Results = ({ results, onRestart }: ResultsProps) => {
               Based on your resume and assessment, here's your skill profile
             </p>
           </motion.div>
+
+          {/* Save Banner */}
+          {!isSaved && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-secondary/10 border border-secondary/20 rounded-xl p-4 mb-8 flex items-center justify-between flex-wrap gap-4"
+            >
+              <div>
+                <h4 className="font-medium text-foreground">
+                  {user ? "Save your results" : "Create an account to save your results"}
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  Track your career progress and access your assessment history anytime
+                </p>
+              </div>
+              <Button 
+                variant="hero" 
+                onClick={saveResults}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    {user ? "Save Results" : "Sign Up & Save"}
+                  </>
+                )}
+              </Button>
+            </motion.div>
+          )}
+
+          {isSaved && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-success/10 border border-success/20 rounded-xl p-4 mb-8 flex items-center justify-between flex-wrap gap-4"
+            >
+              <div>
+                <h4 className="font-medium text-foreground">Results saved successfully!</h4>
+                <p className="text-sm text-muted-foreground">
+                  View all your assessments in your dashboard
+                </p>
+              </div>
+              <Link to="/dashboard">
+                <Button variant="success">
+                  Go to Dashboard
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </motion.div>
+          )}
 
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Skill Scores */}
@@ -273,10 +381,14 @@ const Results = ({ results, onRestart }: ResultsProps) => {
             <Button variant="hero-outline" size="lg" onClick={onRestart}>
               Take New Assessment
             </Button>
-            <Button variant="hero" size="lg">
-              Download Report
-              <ArrowRight className="w-5 h-5" />
-            </Button>
+            {user && (
+              <Link to="/dashboard">
+                <Button variant="hero" size="lg">
+                  View Dashboard
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </Link>
+            )}
           </motion.div>
         </div>
       </div>
