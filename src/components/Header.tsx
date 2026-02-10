@@ -1,4 +1,4 @@
-import { FileText, Menu, X, User, LogOut, Loader2 } from "lucide-react";
+import { FileText, Menu, X, User, LogOut, Loader2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -47,6 +47,11 @@ const Header = () => {
                   <Button variant="ghost" className="gap-2">
                     <User className="w-4 h-4" />
                     {profile?.full_name || user.email?.split('@')[0]}
+                  </Button>
+                </Link>
+                <Link to="/settings">
+                  <Button variant="ghost" size="icon">
+                    <Settings className="w-4 h-4" />
                   </Button>
                 </Link>
                 <Button variant="outline" onClick={handleSignOut} className="gap-2">
