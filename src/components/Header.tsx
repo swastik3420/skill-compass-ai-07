@@ -1,4 +1,4 @@
-import { FileText, Menu, X, User, LogOut, Loader2 } from "lucide-react";
+import { FileText, Menu, X, User, LogOut, Loader2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
