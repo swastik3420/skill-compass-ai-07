@@ -49,6 +49,11 @@ const Header = () => {
                     {profile?.full_name || user.email?.split('@')[0]}
                   </Button>
                 </Link>
+                <Link to="/settings">
+                  <Button variant="ghost" size="icon">
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                </Link>
                 <Button variant="outline" onClick={handleSignOut} className="gap-2">
                   <LogOut className="w-4 h-4" />
                   Sign Out
