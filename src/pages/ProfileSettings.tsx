@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Camera, Loader2, Save, User } from "lucide-react";
@@ -24,6 +24,32 @@ const ProfileSettings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [initialized, setInitialized] = useState(false);
+
+  const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
+
+  const errors = useMemo(() => {
+    const e: Record<string, string> = {};
+    const trimmedName = fullName.trim();
+    const trimmedUsername = username.trim();
+
+    if (!trimmedName) {
+      e.fullName = "Full name is required.";
+    } else if (trimmedName.length < 2) {
+      e.fullName = "Name must be at least 2 characters.";
+    }
+
+    if (trimmedUsername && !usernameRegex.test(trimmedUsername)) {
+      e.username = "3-30 characters, letters, numbers, and underscores only.";
+    }
+
+    if (bio.length > 500) {
+      e.bio = "Bio must be 500 characters or fewer.";
+    }
+
+    return e;
+  }, [fullName, username, bio]);
+
+  const hasErrors = Object.keys(errors).length > 0;
 
   // Sync state when profile loads
   if (profile && !initialized) {
@@ -84,6 +110,11 @@ const ProfileSettings = () => {
   };
 
   const handleSave = async () => {
+    if (hasErrors) {
+      toast({ title: "Fix errors", description: "Please correct the highlighted fields.", variant: "destructive" });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const { error } = await updateProfile({
@@ -161,7 +192,7 @@ const ProfileSettings = () => {
           {/* Form Fields */}
           <div className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="fullName">Full Name <span className="text-destructive">*</span></Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -169,10 +200,11 @@ const ProfileSettings = () => {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Your name"
-                  className="pl-10"
+                  className={`pl-10 ${errors.fullName ? "border-destructive focus-visible:ring-destructive" : ""}`}
                   maxLength={100}
                 />
               </div>
+              {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
             </div>
 
             <div className="space-y-2">
@@ -184,10 +216,11 @@ const ProfileSettings = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="username"
-                  className="pl-10"
-                  maxLength={50}
+                  className={`pl-10 ${errors.username ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                  maxLength={30}
                 />
               </div>
+              {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
             </div>
 
             <div className="space-y-2">
@@ -200,7 +233,7 @@ const ProfileSettings = () => {
                 rows={4}
                 maxLength={500}
               />
-              <p className="text-xs text-muted-foreground text-right">{bio.length}/500</p>
+              <p className={`text-xs text-right ${errors.bio ? "text-destructive" : "text-muted-foreground"}`}>{bio.length}/500</p>
             </div>
 
             <div className="space-y-2">
@@ -215,7 +248,7 @@ const ProfileSettings = () => {
             size="lg"
             className="w-full"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || hasErrors}
           >
             {isSaving ? (
               <Loader2 className="w-5 h-5 animate-spin" />
