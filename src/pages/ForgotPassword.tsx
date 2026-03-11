@@ -61,7 +61,7 @@ const ForgotPassword = () => {
             <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-lg">CP</span>
             </div>
-            <span className="text-xl font-bold text-foreground">CareerPath</span>
+            <span className="text-xl font-bold text-foreground">Path4U</span>
           </Link>
           <h1 className="text-3xl font-bold text-foreground mb-2">Reset Password</h1>
           <p className="text-muted-foreground">

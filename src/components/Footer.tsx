@@ -46,7 +46,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-primary-foreground/20 pt-8 text-center text-sm text-primary-foreground/70">
-          © {new Date().getFullYear()} CareerPath. All rights reserved.
+          © {new Date().getFullYear()} Path4U. All rights reserved.
         </div>
       </div>
     </footer>
