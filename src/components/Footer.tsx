@@ -10,7 +10,7 @@ const Footer = () => {
               <div className="w-10 h-10 bg-secondary rounded-xl flex items-center justify-center">
                 <FileText className="w-5 h-5 text-secondary-foreground" />
               </div>
-              <span className="text-xl font-bold">CareerPath</span>
+              <span className="text-xl font-bold">Path4U</span>
             </div>
             <p className="text-primary-foreground/70 text-sm">
               AI-powered career intelligence to help you land your dream job.
@@ -46,7 +46,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-primary-foreground/20 pt-8 text-center text-sm text-primary-foreground/70">
-          © {new Date().getFullYear()} CareerPath. All rights reserved.
+          © {new Date().getFullYear()} Path4U. All rights reserved.
         </div>
       </div>
     </footer>

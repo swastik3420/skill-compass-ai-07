@@ -48,7 +48,7 @@ const Features = () => {
             Everything You Need to Level Up
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            CareerPath combines AI-powered analysis with practical insights to accelerate your career growth
+            Path4U combines AI-powered analysis with practical insights to accelerate your career growth
           </p>
         </motion.div>
 
