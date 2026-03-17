@@ -45,7 +45,7 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-primary-foreground/20 pt-8 text-center text-sm text-primary-foreground/70">
+        <div className="border-t border-background/15 pt-8 text-center text-sm text-background/60">
           © {new Date().getFullYear()} Path4U. All rights reserved.
         </div>
       </div>
