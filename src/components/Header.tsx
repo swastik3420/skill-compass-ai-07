@@ -19,10 +19,10 @@ const Header = () => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center shadow-md">
               <FileText className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">Path4U</span>
+            <span className="text-xl font-extrabold text-foreground font-display">Path4U</span>
           </Link>
 
           {/* Desktop Navigation */}
