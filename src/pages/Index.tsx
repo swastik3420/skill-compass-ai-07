@@ -66,6 +66,7 @@ const Index = () => {
       {appState === "landing" && (
         <>
           <Hero onGetStarted={handleGetStarted} />
+          <HowItWorks />
           <Features />
         </>
       )}
