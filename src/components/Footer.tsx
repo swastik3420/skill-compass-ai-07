@@ -7,12 +7,12 @@ const Footer = () => {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-secondary rounded-xl flex items-center justify-center">
-                <FileText className="w-5 h-5 text-secondary-foreground" />
+              <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center">
+                <FileText className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold">Path4U</span>
+              <span className="text-xl font-extrabold font-display">Path4U</span>
             </div>
-            <p className="text-primary-foreground/70 text-sm">
+            <p className="text-background/60 text-sm">
               AI-powered career intelligence to help you land your dream job.
             </p>
           </div>
