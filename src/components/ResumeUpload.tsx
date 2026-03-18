@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
-import { Upload, FileText, X, CheckCircle, Loader2, AlertCircle } from "lucide-react";
+import { Upload, FileText, X, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { parseResume, extractTextFromPdf, type ParsedResume } from "@/lib/api/career";
+import { parseResume, extractResumeText, type ParsedResume } from "@/lib/api/career";
 import { useToast } from "@/components/ui/use-toast";
 
 interface ResumeUploadProps {
@@ -10,6 +10,14 @@ interface ResumeUploadProps {
   onStartAssessment: () => void;
   onResumeAnalyzed?: (data: ParsedResume) => void;
 }
+
+const ACCEPTED_TYPES = [
+  'application/pdf',
+  'text/plain',
+  'text/markdown',
+];
+
+const ACCEPTED_EXTENSIONS = ['.pdf', '.txt', '.md'];
 
 const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: ResumeUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -20,6 +28,11 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
   const [error, setError] = useState<string | null>(null);
   const [parsedData, setParsedData] = useState<ParsedResume | null>(null);
   const { toast } = useToast();
+
+  const isAcceptedFile = (f: File) => {
+    const ext = '.' + f.name.split('.').pop()?.toLowerCase();
+    return ACCEPTED_EXTENSIONS.includes(ext) || ACCEPTED_TYPES.includes(f.type);
+  };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -37,8 +50,14 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
     setIsDragging(false);
 
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && (droppedFile.type === "application/pdf" || droppedFile.name.endsWith('.pdf'))) {
+    if (droppedFile && isAcceptedFile(droppedFile)) {
       processFile(droppedFile);
+    } else {
+      toast({
+        title: "Unsupported file",
+        description: "Please upload a PDF or TXT file.",
+        variant: "destructive",
+      });
     }
   }, []);
 
@@ -53,16 +72,14 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
     setFile(uploadedFile);
     setIsProcessing(true);
     setError(null);
-    setProcessingStatus("Extracting text from PDF...");
+    setProcessingStatus("Extracting text from your resume...");
     
     try {
-      // Extract text from PDF
-      const resumeText = await extractTextFromPdf(uploadedFile);
+      const resumeText = await extractResumeText(uploadedFile);
       console.log('Extracted resume text, length:', resumeText.length);
       
-      setProcessingStatus("Analyzing your resume with AI...");
+      setProcessingStatus("Analyzing skills and experience with AI...");
       
-      // Parse the resume with AI
       const result = await parseResume(resumeText);
       
       if (!result.success || !result.data) {
@@ -79,7 +96,7 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
       
       toast({
         title: "Resume Analyzed!",
-        description: `Found ${result.data.skills.length} skills across ${result.data.skills.map(s => s.category).filter((v, i, a) => a.indexOf(v) === i).length} categories.`,
+        description: `Found ${result.data.skills.length} skills. Ready to generate your personalized assessment.`,
       });
     } catch (err) {
       console.error('Error processing file:', err);
@@ -117,7 +134,7 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
             Upload Your Resume
           </h2>
           <p className="text-muted-foreground">
-            Our AI will analyze your resume and create a personalized skill assessment
+            Our AI will extract your skills and create a personalized assessment — works with any resume
           </p>
         </motion.div>
 
@@ -137,7 +154,7 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
               ${isDragging 
                 ? "border-secondary bg-secondary/10" 
                 : file 
-                  ? "border-success bg-success/5" 
+                  ? error ? "border-destructive bg-destructive/5" : "border-success bg-success/5"
                   : "border-border hover:border-secondary/50 bg-card"
               }
             `}
@@ -157,11 +174,11 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
                     Drag & drop your resume
                   </h3>
                   <p className="text-muted-foreground mb-6">
-                    or click to browse (PDF only)
+                    Supports PDF and TXT files
                   </p>
                   <input
                     type="file"
-                    accept=".pdf"
+                    accept=".pdf,.txt,.md"
                     onChange={handleFileSelect}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
@@ -175,39 +192,90 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  className="flex items-center justify-between"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isReady ? 'bg-success/20' : 'bg-secondary/20'}`}>
-                      {isProcessing ? (
-                        <Loader2 className="w-6 h-6 text-secondary animate-spin" />
-                      ) : isReady ? (
-                        <CheckCircle className="w-6 h-6 text-success" />
-                      ) : (
-                        <FileText className="w-6 h-6 text-secondary" />
-                      )}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        error ? 'bg-destructive/20' : isReady ? 'bg-success/20' : 'bg-secondary/20'
+                      }`}>
+                        {isProcessing ? (
+                          <Loader2 className="w-6 h-6 text-secondary animate-spin" />
+                        ) : isReady ? (
+                          <CheckCircle className="w-6 h-6 text-success" />
+                        ) : (
+                          <FileText className="w-6 h-6 text-secondary" />
+                        )}
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-foreground truncate max-w-[200px]">
+                          {file.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {isProcessing 
+                            ? processingStatus || "Processing..." 
+                            : isReady 
+                              ? `${parsedData?.skills.length || 0} skills found` 
+                              : error 
+                                ? error 
+                                : ""}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <p className="font-medium text-foreground truncate max-w-[200px]">
-                        {file.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {isProcessing ? processingStatus || "Processing..." : isReady ? `${parsedData?.skills.length || 0} skills found` : error ? "Error" : ""}
-                      </p>
-                    </div>
+                    {!isProcessing && (
+                      <button
+                        onClick={removeFile}
+                        className="p-2 hover:bg-muted rounded-lg transition-colors"
+                      >
+                        <X className="w-5 h-5 text-muted-foreground" />
+                      </button>
+                    )}
                   </div>
-                  {!isProcessing && (
-                    <button
-                      onClick={removeFile}
-                      className="p-2 hover:bg-muted rounded-lg transition-colors"
+
+                  {/* Skill preview after analysis */}
+                  {isReady && parsedData && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="mt-6 pt-6 border-t border-border"
                     >
-                      <X className="w-5 h-5 text-muted-foreground" />
-                    </button>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {parsedData.skills.slice(0, 10).map((skill, i) => (
+                          <span
+                            key={i}
+                            className="px-3 py-1 bg-secondary/15 text-secondary rounded-full text-sm font-medium"
+                          >
+                            {skill.name}
+                          </span>
+                        ))}
+                        {parsedData.skills.length > 10 && (
+                          <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm">
+                            +{parsedData.skills.length - 10} more
+                          </span>
+                        )}
+                      </div>
+                      {parsedData.experienceLevel && (
+                        <p className="text-sm text-muted-foreground mt-3">
+                          Experience: <span className="text-foreground font-medium">{parsedData.experienceLevel}</span>
+                        </p>
+                      )}
+                    </motion.div>
                   )}
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
+
+          {error && !isProcessing && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 text-center"
+            >
+              <Button variant="outline" onClick={removeFile}>
+                Try Another File
+              </Button>
+            </motion.div>
+          )}
 
           {isReady && (
             <motion.div

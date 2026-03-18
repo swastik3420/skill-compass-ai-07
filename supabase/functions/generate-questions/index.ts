@@ -14,64 +14,91 @@ serve(async (req) => {
     const { skills, experienceLevel } = await req.json();
 
     if (!skills || !Array.isArray(skills) || skills.length === 0) {
-      console.error('Invalid skills provided');
       return new Response(
         JSON.stringify({ error: 'Skills array is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Generating questions for', skills.length, 'skills, experience level:', experienceLevel);
-
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY not configured');
       return new Response(
         JSON.stringify({ error: 'AI service not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Select top skills for assessment (max 5-7 skills)
-    const topSkills = skills.slice(0, 7).map((s: any) => 
-      typeof s === 'string' ? s : s.name
-    );
+    // Select skills for assessment — prioritize diverse categories, max 8 skills
+    const skillObjects = skills.map((s: any) => typeof s === 'string' ? { name: s, category: 'Other', proficiencyHint: 'Intermediate' } : s);
+    
+    // Group by category and pick top from each for diversity
+    const byCategory: Record<string, any[]> = {};
+    for (const s of skillObjects) {
+      const cat = s.category || 'Other';
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(s);
+    }
+    
+    const selectedSkills: any[] = [];
+    const categories = Object.keys(byCategory);
+    let round = 0;
+    while (selectedSkills.length < 8 && round < 5) {
+      for (const cat of categories) {
+        if (selectedSkills.length >= 8) break;
+        if (byCategory[cat][round]) {
+          selectedSkills.push(byCategory[cat][round]);
+        }
+      }
+      round++;
+    }
 
-    const systemPrompt = `You are an expert technical interviewer creating a skill assessment. Generate assessment questions for the following skills: ${topSkills.join(', ')}.
+    const skillDescriptions = selectedSkills.map(s => 
+      `${s.name} (${s.category}, estimated: ${s.proficiencyHint || 'Unknown'})`
+    ).join('\n- ');
 
-The candidate's estimated experience level is: ${experienceLevel || 'Unknown'}
+    console.log('Generating questions for', selectedSkills.length, 'skills, level:', experienceLevel);
 
-For EACH skill, generate 1-2 questions (total 5-8 questions). Include a mix of difficulty levels:
-- Basic: Fundamental concepts everyone should know
-- Intermediate: Practical application knowledge
-- Advanced: Deep understanding and edge cases
+    const systemPrompt = `You are an expert technical interviewer creating a personalized skill assessment. Your questions should accurately measure the candidate's real proficiency level.
 
-Each question must have exactly 4 options with only ONE correct answer.
+## Candidate Profile
+- Experience Level: ${experienceLevel || 'Unknown'}
+- Skills to assess:
+- ${skillDescriptions}
 
-Return your response as a JSON array with this structure:
+## Requirements
+
+Generate exactly ${Math.min(selectedSkills.length * 2, 12)} questions total, covering the skills listed above.
+
+For each skill, create 1-2 questions. Adjust difficulty based on the candidate's experience level AND the skill's proficiency hint:
+- If proficiency is "Beginner" → mostly Basic questions with 1 Intermediate
+- If proficiency is "Intermediate" → mix of Basic and Intermediate, maybe 1 Advanced
+- If proficiency is "Advanced" → Intermediate and Advanced questions
+
+Question quality rules:
+- Questions must be practical and test real-world knowledge, not trivia
+- All 4 options must be plausible — no obviously wrong answers
+- Only ONE correct answer per question
+- Explanations should teach something useful
+- Cover different aspects of each skill (don't repeat similar questions)
+
+## Output Format
+
+Return ONLY a valid JSON array (no markdown, no extra text):
 [
   {
-    "skill": "JavaScript",
-    "difficulty": "Basic",
-    "question": "What is the difference between '==' and '===' in JavaScript?",
+    "skill": "React",
+    "difficulty": "Intermediate",
+    "question": "What is the primary purpose of React's useCallback hook?",
     "options": [
-      "'===' checks type and value, '==' only checks value after type coercion",
-      "'==' is faster than '==='",
-      "They are exactly the same",
-      "'===' is deprecated"
+      "To memoize a callback function to prevent unnecessary re-renders",
+      "To create a new callback on every render for fresh closure values",
+      "To replace the need for useEffect in event handlers",
+      "To automatically debounce function calls"
     ],
     "correctAnswer": 0,
-    "explanation": "The === operator performs strict equality checking both type and value, while == performs type coercion before comparison."
+    "explanation": "useCallback memoizes a callback function so it maintains the same reference between renders, preventing unnecessary re-renders of child components that receive it as a prop."
   }
-]
-
-Important:
-- Make questions practical and relevant to real-world work
-- Ensure options are plausible (not obviously wrong)
-- correctAnswer is the 0-based index of the correct option
-- Include a brief explanation for learning purposes
-
-Only return valid JSON array, no additional text.`;
+]`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -83,9 +110,9 @@ Only return valid JSON array, no additional text.`;
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate assessment questions for these skills: ${topSkills.join(', ')}` }
+          { role: 'user', content: `Generate the assessment questions now for the skills listed above.` }
         ],
-        temperature: 0.7,
+        temperature: 0.6,
       }),
     });
 
@@ -113,36 +140,47 @@ Only return valid JSON array, no additional text.`;
     }
 
     const data = await response.json();
-    console.log('AI response received');
-    
     const content = data.choices?.[0]?.message?.content;
+    
     if (!content) {
-      console.error('No content in AI response');
       return new Response(
         JSON.stringify({ error: 'Invalid AI response' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Parse the JSON from the AI response
     let questions;
     try {
       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
       const jsonStr = jsonMatch ? jsonMatch[1] : content;
       questions = JSON.parse(jsonStr.trim());
       
-      // Add IDs to questions
-      questions = questions.map((q: any, index: number) => ({
-        ...q,
-        id: index + 1
-      }));
+      if (!Array.isArray(questions)) {
+        throw new Error('Response is not an array');
+      }
       
-      console.log('Successfully generated', questions.length, 'questions');
+      // Add IDs and validate structure
+      questions = questions
+        .filter((q: any) => q.question && q.options && Array.isArray(q.options) && q.options.length === 4)
+        .map((q: any, index: number) => ({
+          id: index + 1,
+          skill: q.skill || 'General',
+          difficulty: q.difficulty || 'Intermediate',
+          question: q.question,
+          options: q.options,
+          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+          explanation: q.explanation || '',
+        }));
+      
+      console.log('Generated', questions.length, 'valid questions');
+      
+      if (questions.length === 0) {
+        throw new Error('No valid questions generated');
+      }
     } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', parseError);
-      console.error('Raw content:', content);
+      console.error('Failed to parse questions:', parseError, 'Content:', content.substring(0, 500));
       return new Response(
-        JSON.stringify({ error: 'Failed to parse questions' }),
+        JSON.stringify({ error: 'Failed to parse questions. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -153,7 +191,7 @@ Only return valid JSON array, no additional text.`;
     );
 
   } catch (error) {
-    console.error('Error in generate-questions function:', error);
+    console.error('Error in generate-questions:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
