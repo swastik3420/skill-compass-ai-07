@@ -1,4 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure the worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 export interface ParsedSkill {
   name: string;
@@ -84,73 +88,54 @@ export async function generateQuestions(
 }
 
 /**
- * Extract text from a PDF file using the browser's PDF.js library
- * Note: For production, consider using a dedicated PDF parsing library
+ * Extract text from a PDF file using pdf.js for reliable parsing
  */
 export async function extractTextFromPdf(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = async (e) => {
-      try {
-        const arrayBuffer = e.target?.result as ArrayBuffer;
-        
-        // Basic text extraction from PDF - looks for text patterns
-        // This is a simplified approach; for production use pdf.js or similar
-        const bytes = new Uint8Array(arrayBuffer);
-        let text = '';
-        
-        // Convert to string and try to extract readable text
-        const decoder = new TextDecoder('utf-8', { fatal: false });
-        const rawText = decoder.decode(bytes);
-        
-        // Extract text between stream markers (simplified PDF text extraction)
-        const streamMatches = rawText.match(/stream[\s\S]*?endstream/g) || [];
-        
-        for (const stream of streamMatches) {
-          // Look for text patterns - parentheses often contain text in PDFs
-          const textMatches = stream.match(/\(([^)]+)\)/g) || [];
-          for (const match of textMatches) {
-            const extracted = match.slice(1, -1);
-            // Filter out binary/garbage content
-            if (/^[\x20-\x7E\s]+$/.test(extracted) && extracted.length > 1) {
-              text += extracted + ' ';
-            }
-          }
-        }
-        
-        // Also try to extract text from common PDF text operators
-        const tjMatches = rawText.match(/\[([^\]]+)\]\s*TJ/g) || [];
-        for (const match of tjMatches) {
-          const textParts = match.match(/\(([^)]+)\)/g) || [];
-          for (const part of textParts) {
-            const extracted = part.slice(1, -1);
-            if (/^[\x20-\x7E\s]+$/.test(extracted)) {
-              text += extracted;
-            }
-          }
-        }
+  const arrayBuffer = await file.arrayBuffer();
+  
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const numPages = pdf.numPages;
+  const textParts: string[] = [];
 
-        // Clean up the text
-        text = text
-          .replace(/\s+/g, ' ')
-          .replace(/[^\x20-\x7E\n]/g, '')
-          .trim();
+  for (let i = 1; i <= numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item: any) => item.str)
+      .join(' ');
+    textParts.push(pageText);
+  }
 
-        if (text.length < 50) {
-          // If we couldn't extract enough text, return a message for the AI
-          text = `[PDF file uploaded: ${file.name}. The text could not be fully extracted. Please provide resume details manually or try a different file format.]`;
-        }
+  const fullText = textParts.join('\n\n').trim();
+  
+  if (fullText.length < 30) {
+    throw new Error('Could not extract text from this PDF. It may be image-based or encrypted. Try a different file or paste your resume text.');
+  }
 
-        console.log('Extracted text length:', text.length);
-        resolve(text);
-      } catch (error) {
-        console.error('Error extracting PDF text:', error);
-        reject(error);
-      }
-    };
-    
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    reader.readAsArrayBuffer(file);
-  });
+  console.log(`Extracted ${fullText.length} characters from ${numPages} pages`);
+  return fullText;
+}
+
+/**
+ * Extract text from a plain text or markdown file
+ */
+export async function extractTextFromTextFile(file: File): Promise<string> {
+  return await file.text();
+}
+
+/**
+ * Determine file type and extract text accordingly
+ */
+export async function extractResumeText(file: File): Promise<string> {
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  
+  switch (extension) {
+    case 'pdf':
+      return extractTextFromPdf(file);
+    case 'txt':
+    case 'md':
+      return extractTextFromTextFile(file);
+    default:
+      throw new Error(`Unsupported file format: .${extension}. Please upload a PDF or TXT file.`);
+  }
 }

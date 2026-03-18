@@ -14,7 +14,6 @@ serve(async (req) => {
     const { resumeText } = await req.json();
 
     if (!resumeText || typeof resumeText !== 'string') {
-      console.error('Invalid resume text provided');
       return new Response(
         JSON.stringify({ error: 'Resume text is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -25,44 +24,66 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY not configured');
       return new Response(
         JSON.stringify({ error: 'AI service not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const systemPrompt = `You are an expert resume analyzer. Extract the following information from the resume:
+    const systemPrompt = `You are an expert resume analyzer and career coach. Your job is to thoroughly extract ALL skills from a resume, even when the resume is poorly formatted, uses abbreviations, or has unconventional structure.
 
-1. **Skills**: List all technical and soft skills mentioned. Categorize them as:
-   - Programming Languages (e.g., JavaScript, Python, Java)
-   - Frameworks/Libraries (e.g., React, Node.js, Django)
-   - Tools/Technologies (e.g., Git, Docker, AWS)
-   - Soft Skills (e.g., Leadership, Communication)
-   - Other Skills
+## Instructions
 
-2. **Experience Level**: Based on years of experience and role complexity, estimate:
-   - Entry Level (0-2 years)
-   - Mid Level (2-5 years)  
-   - Senior Level (5+ years)
+Analyze the resume text carefully and extract:
 
-3. **Job Titles**: Extract any mentioned job titles or roles
+1. **Skills** — Be comprehensive. Look for:
+   - Explicitly listed skills (skills sections, bullet points)
+   - Skills implied by job responsibilities (e.g., "managed a team of 5" → Leadership, Team Management)
+   - Tools and technologies mentioned in project descriptions
+   - Certifications and their associated skills
+   - Soft skills from descriptions of achievements
+   - Domain knowledge from industry experience
+   
+   Categorize each skill into one of these categories:
+   - "Programming Languages" (e.g., JavaScript, Python, Java, C++, SQL)
+   - "Frameworks & Libraries" (e.g., React, Angular, Django, Spring Boot, TensorFlow)
+   - "Cloud & DevOps" (e.g., AWS, Docker, Kubernetes, CI/CD, Terraform)
+   - "Databases" (e.g., PostgreSQL, MongoDB, Redis, MySQL)
+   - "Tools & Platforms" (e.g., Git, Jira, Figma, VS Code, Postman)
+   - "Data & Analytics" (e.g., Machine Learning, Data Analysis, Tableau, Excel)
+   - "Soft Skills" (e.g., Leadership, Communication, Problem Solving)
+   - "Domain Knowledge" (e.g., Finance, Healthcare, E-commerce, Marketing)
+   - "Other Technical" (anything else technical)
 
-4. **Industries**: Identify industries the person has worked in
+   For proficiencyHint, infer from context:
+   - "Advanced" — years of experience, lead roles, complex projects
+   - "Intermediate" — mentioned in multiple contexts, practical experience
+   - "Beginner" — mentioned once, certifications, coursework
 
-Return your response as a JSON object with this structure:
+2. **Experience Level** — Based on total years and role seniority:
+   - "Entry Level" (0-2 years or student/intern/junior roles)
+   - "Mid Level" (2-5 years or standard IC roles)
+   - "Senior Level" (5-8 years or senior/lead roles)
+   - "Staff/Principal" (8+ years or staff/principal/architect roles)
+
+3. **Job Titles** — All roles mentioned
+4. **Industries** — All industries/domains mentioned
+5. **Summary** — 2-3 sentence profile summary
+
+## Output Format
+
+Return ONLY valid JSON (no markdown):
 {
   "skills": [
-    { "name": "JavaScript", "category": "Programming Languages", "proficiencyHint": "Advanced" },
-    { "name": "React", "category": "Frameworks/Libraries", "proficiencyHint": "Intermediate" }
+    { "name": "React", "category": "Frameworks & Libraries", "proficiencyHint": "Advanced" }
   ],
   "experienceLevel": "Mid Level",
-  "jobTitles": ["Software Developer", "Frontend Engineer"],
-  "industries": ["Technology", "Finance"],
-  "summary": "Brief 1-2 sentence summary of the candidate's profile"
+  "jobTitles": ["Software Engineer"],
+  "industries": ["Technology"],
+  "summary": "..."
 }
 
-Only return valid JSON, no additional text.`;
+IMPORTANT: Extract at least 5-10 skills minimum. If the text is messy or short, still do your best to identify skills from ANY clues in the text. Never return an empty skills array.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -74,9 +95,9 @@ Only return valid JSON, no additional text.`;
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Please analyze this resume and extract the skills and information:\n\n${resumeText}` }
+          { role: 'user', content: `Here is the resume text to analyze:\n\n---\n${resumeText}\n---\n\nExtract all skills and information from this resume.` }
         ],
-        temperature: 0.3,
+        temperature: 0.2,
       }),
     });
 
@@ -104,30 +125,31 @@ Only return valid JSON, no additional text.`;
     }
 
     const data = await response.json();
-    console.log('AI response received');
-    
     const content = data.choices?.[0]?.message?.content;
+    
     if (!content) {
-      console.error('No content in AI response');
       return new Response(
         JSON.stringify({ error: 'Invalid AI response' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Parse the JSON from the AI response
     let parsedResume;
     try {
-      // Try to extract JSON from the response (handle markdown code blocks)
       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
       const jsonStr = jsonMatch ? jsonMatch[1] : content;
       parsedResume = JSON.parse(jsonStr.trim());
-      console.log('Successfully parsed resume data, found', parsedResume.skills?.length || 0, 'skills');
+      
+      // Ensure skills is always an array
+      if (!Array.isArray(parsedResume.skills)) {
+        parsedResume.skills = [];
+      }
+      
+      console.log('Successfully parsed resume:', parsedResume.skills.length, 'skills,', parsedResume.experienceLevel);
     } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', parseError);
-      console.error('Raw content:', content);
+      console.error('Failed to parse AI response:', parseError, 'Content:', content.substring(0, 500));
       return new Response(
-        JSON.stringify({ error: 'Failed to parse resume data' }),
+        JSON.stringify({ error: 'Failed to parse resume data. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -138,7 +160,7 @@ Only return valid JSON, no additional text.`;
     );
 
   } catch (error) {
-    console.error('Error in parse-resume function:', error);
+    console.error('Error in parse-resume:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
