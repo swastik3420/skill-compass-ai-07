@@ -28,7 +28,7 @@ serve(async (req) => {
       );
     }
 
-    // Select skills for assessment — prioritize diverse categories, max 8 skills
+    // Select skills for assessment — prioritize diverse categories, max 15 skills for 30 questions
     const skillObjects = skills.map((s: any) => typeof s === 'string' ? { name: s, category: 'Other', proficiencyHint: 'Intermediate' } : s);
     
     // Group by category and pick top from each for diversity
@@ -42,9 +42,9 @@ serve(async (req) => {
     const selectedSkills: any[] = [];
     const categories = Object.keys(byCategory);
     let round = 0;
-    while (selectedSkills.length < 8 && round < 5) {
+    while (selectedSkills.length < 15 && round < 10) {
       for (const cat of categories) {
-        if (selectedSkills.length >= 8) break;
+        if (selectedSkills.length >= 15) break;
         if (byCategory[cat][round]) {
           selectedSkills.push(byCategory[cat][round]);
         }
