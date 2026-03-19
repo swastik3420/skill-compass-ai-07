@@ -28,7 +28,7 @@ serve(async (req) => {
       );
     }
 
-    // Select skills for assessment — prioritize diverse categories, max 8 skills
+    // Select skills for assessment — prioritize diverse categories, max 15 skills for 30 questions
     const skillObjects = skills.map((s: any) => typeof s === 'string' ? { name: s, category: 'Other', proficiencyHint: 'Intermediate' } : s);
     
     // Group by category and pick top from each for diversity
@@ -42,9 +42,9 @@ serve(async (req) => {
     const selectedSkills: any[] = [];
     const categories = Object.keys(byCategory);
     let round = 0;
-    while (selectedSkills.length < 8 && round < 5) {
+    while (selectedSkills.length < 15 && round < 10) {
       for (const cat of categories) {
-        if (selectedSkills.length >= 8) break;
+        if (selectedSkills.length >= 15) break;
         if (byCategory[cat][round]) {
           selectedSkills.push(byCategory[cat][round]);
         }
@@ -58,7 +58,7 @@ serve(async (req) => {
 
     console.log('Generating questions for', selectedSkills.length, 'skills, level:', experienceLevel);
 
-    const systemPrompt = `You are an expert technical interviewer creating a personalized skill assessment. Your questions should accurately measure the candidate's real proficiency level.
+    const systemPrompt = `You are an expert technical interviewer creating a comprehensive skill assessment. Your questions should accurately measure the candidate's real proficiency level across all their skills.
 
 ## Candidate Profile
 - Experience Level: ${experienceLevel || 'Unknown'}
@@ -67,12 +67,12 @@ serve(async (req) => {
 
 ## Requirements
 
-Generate exactly ${Math.min(selectedSkills.length * 2, 12)} questions total, covering the skills listed above.
+Generate exactly 30 questions total:
+- 10 Basic difficulty questions
+- 10 Intermediate difficulty questions  
+- 10 Advanced difficulty questions
 
-For each skill, create 1-2 questions. Adjust difficulty based on the candidate's experience level AND the skill's proficiency hint:
-- If proficiency is "Beginner" → mostly Basic questions with 1 Intermediate
-- If proficiency is "Intermediate" → mix of Basic and Intermediate, maybe 1 Advanced
-- If proficiency is "Advanced" → Intermediate and Advanced questions
+Distribute questions across ALL the skills listed above to maximize coverage. Each skill should have at least 1 question. Spread the remaining questions to cover more aspects of each skill.
 
 Question quality rules:
 - Questions must be practical and test real-world knowledge, not trivia
@@ -80,6 +80,9 @@ Question quality rules:
 - Only ONE correct answer per question
 - Explanations should teach something useful
 - Cover different aspects of each skill (don't repeat similar questions)
+- Basic questions test fundamental concepts and syntax
+- Intermediate questions test practical application and common patterns
+- Advanced questions test deep understanding, edge cases, and architectural decisions
 
 ## Output Format
 
