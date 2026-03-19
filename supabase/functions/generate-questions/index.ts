@@ -154,9 +154,41 @@ Return ONLY a valid JSON array (no markdown, no extra text):
 
     let questions;
     try {
+      // Strip markdown code fences if present
+      let jsonStr = content;
       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
-      const jsonStr = jsonMatch ? jsonMatch[1] : content;
-      questions = JSON.parse(jsonStr.trim());
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1];
+      }
+      jsonStr = jsonStr.trim();
+      
+      // Find the outermost JSON array by matching brackets
+      const startIdx = jsonStr.indexOf('[');
+      if (startIdx === -1) throw new Error('No JSON array found');
+      
+      let depth = 0;
+      let endIdx = -1;
+      for (let i = startIdx; i < jsonStr.length; i++) {
+        if (jsonStr[i] === '[') depth++;
+        else if (jsonStr[i] === ']') {
+          depth--;
+          if (depth === 0) { endIdx = i; break; }
+        }
+      }
+      
+      if (endIdx === -1) {
+        // Array wasn't closed - try to fix by finding last complete object and closing
+        const lastObjEnd = jsonStr.lastIndexOf('}');
+        if (lastObjEnd > startIdx) {
+          jsonStr = jsonStr.substring(startIdx, lastObjEnd + 1) + ']';
+        } else {
+          throw new Error('Cannot find valid JSON array');
+        }
+      } else {
+        jsonStr = jsonStr.substring(startIdx, endIdx + 1);
+      }
+      
+      questions = JSON.parse(jsonStr);
       
       if (!Array.isArray(questions)) {
         throw new Error('Response is not an array');
