@@ -1,65 +1,21 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { TrendingUp, Briefcase, BookOpen, Award, ArrowRight, Star, MapPin, Clock, Save, Loader2 } from "lucide-react";
+import { TrendingUp, BookOpen, Award, ArrowRight, Star, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import type { ParsedResume } from "@/lib/api/career";
+import SkillFingerprint from "@/components/SkillFingerprint";
+import JobRoleProbability from "@/components/JobRoleProbability";
+import AIJobSearch from "@/components/AIJobSearch";
 
 interface SkillResult {
   skill: string;
   score: number;
   level: string;
 }
-
-interface Job {
-  id: number;
-  title: string;
-  company: string;
-  location: string;
-  type: string;
-  match: number;
-  skills: string[];
-}
-
-const mockJobs: Job[] = [
-  {
-    id: 1,
-    title: "Frontend Developer",
-    company: "TechCorp Inc.",
-    location: "Remote",
-    type: "Full-time",
-    match: 92,
-    skills: ["React", "JavaScript", "TypeScript"]
-  },
-  {
-    id: 2,
-    title: "Full Stack Engineer",
-    company: "StartupXYZ",
-    location: "San Francisco, CA",
-    type: "Full-time",
-    match: 85,
-    skills: ["Node.js", "React", "SQL"]
-  },
-  {
-    id: 3,
-    title: "Junior Web Developer",
-    company: "Digital Agency Co",
-    location: "New York, NY",
-    type: "Full-time",
-    match: 78,
-    skills: ["JavaScript", "React", "CSS"]
-  }
-];
-
-const suggestedSkills = [
-  { skill: "GraphQL", reason: "High demand in modern web development" },
-  { skill: "Docker", reason: "Essential for deployment and DevOps" },
-  { skill: "Testing (Jest/Vitest)", reason: "Improves code quality and employability" },
-  { skill: "System Design", reason: "Required for senior roles" }
-];
 
 interface ResultsProps {
   results: SkillResult[];
@@ -131,10 +87,17 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
     return "bg-destructive";
   };
 
+  const suggestedSkills = [
+    { skill: "GraphQL", reason: "High demand in modern web development" },
+    { skill: "Docker", reason: "Essential for deployment and DevOps" },
+    { skill: "Testing (Jest/Vitest)", reason: "Improves code quality and employability" },
+    { skill: "System Design", reason: "Required for senior roles" }
+  ];
+
   return (
     <section className="py-20 min-h-screen">
       <div className="container mx-auto px-4">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -148,7 +111,7 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
               Your Career Assessment Results
             </h2>
             <p className="text-muted-foreground">
-              Based on your resume and assessment, here's your skill profile
+              Based on your resume and {results.length > 0 ? `${results.length}-skill` : ''} assessment, here's your complete profile
             </p>
           </motion.div>
 
@@ -167,11 +130,7 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
                   Track your career progress and access your assessment history anytime
                 </p>
               </div>
-              <Button 
-                variant="hero" 
-                onClick={saveResults}
-                disabled={isSaving}
-              >
+              <Button variant="hero" onClick={saveResults} disabled={isSaving}>
                 {isSaving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
@@ -192,9 +151,7 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
             >
               <div>
                 <h4 className="font-medium text-foreground">Results saved successfully!</h4>
-                <p className="text-sm text-muted-foreground">
-                  View all your assessments in your dashboard
-                </p>
+                <p className="text-sm text-muted-foreground">View all your assessments in your dashboard</p>
               </div>
               <Link to="/dashboard">
                 <Button variant="success">
@@ -205,105 +162,22 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
             </motion.div>
           )}
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Skill Scores */}
+          {/* Row 1: Overall Score + Skill Fingerprint */}
+          <div className="grid lg:grid-cols-3 gap-8 mb-8">
+            {/* Overall Score Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="lg:col-span-2"
             >
-              <div className="bg-card rounded-2xl shadow-lg p-6 mb-8">
-                <div className="flex items-center gap-3 mb-6">
-                  <TrendingUp className="w-6 h-6 text-secondary" />
-                  <h3 className="text-xl font-semibold text-foreground">Skill Evaluation</h3>
-                </div>
-
-                <div className="space-y-6">
-                  {results.map((result, index) => (
-                    <motion.div
-                      key={result.skill}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 + index * 0.1 }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <span className="font-medium text-foreground">{result.skill}</span>
-                          <span className="px-2 py-1 bg-muted rounded-md text-xs text-muted-foreground">
-                            {result.level}
-                          </span>
-                        </div>
-                        <span className={`font-bold ${getScoreColor(result.score)}`}>
-                          {result.score}%
-                        </span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${result.score}%` }}
-                          transition={{ delay: 0.4 + index * 0.1, duration: 0.8 }}
-                          className={`h-full rounded-full ${getProgressColor(result.score)}`}
-                        />
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Skills to Learn */}
-              <div className="bg-card rounded-2xl shadow-lg p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <BookOpen className="w-6 h-6 text-secondary" />
-                  <h3 className="text-xl font-semibold text-foreground">Recommended Skills to Learn</h3>
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {suggestedSkills.map((item, index) => (
-                    <motion.div
-                      key={item.skill}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5 + index * 0.1 }}
-                      className="p-4 bg-muted rounded-xl"
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <Star className="w-4 h-4 text-secondary" />
-                        <span className="font-medium text-foreground">{item.skill}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{item.reason}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Overall Score & Jobs */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              {/* Overall Score Card */}
-              <div className="bg-card rounded-2xl shadow-lg p-6 mb-8 text-center">
+              <div className="bg-card rounded-2xl shadow-lg p-6 text-center h-full">
                 <h4 className="text-muted-foreground mb-4">Overall Score</h4>
                 <div className="relative w-32 h-32 mx-auto mb-4">
                   <svg className="w-full h-full transform -rotate-90">
-                    <circle
-                      cx="64"
-                      cy="64"
-                      r="56"
-                      fill="none"
-                      stroke="hsl(var(--muted))"
-                      strokeWidth="12"
-                    />
+                    <circle cx="64" cy="64" r="56" fill="none" stroke="hsl(var(--muted))" strokeWidth="12" />
                     <motion.circle
-                      cx="64"
-                      cy="64"
-                      r="56"
-                      fill="none"
-                      stroke="hsl(var(--secondary))"
-                      strokeWidth="12"
+                      cx="64" cy="64" r="56" fill="none"
+                      stroke="hsl(var(--secondary))" strokeWidth="12"
                       strokeDasharray={`${overallScore * 3.52} 352`}
                       initial={{ strokeDasharray: "0 352" }}
                       animate={{ strokeDasharray: `${overallScore * 3.52} 352` }}
@@ -316,60 +190,106 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {overallScore >= 80 
-                    ? "Excellent! You're highly skilled" 
-                    : overallScore >= 60 
-                      ? "Good foundation with room to grow"
-                      : "Focus on building core skills"}
+                  {overallScore >= 80 ? "Excellent! You're highly skilled" 
+                    : overallScore >= 60 ? "Good foundation with room to grow"
+                    : "Focus on building core skills"}
                 </p>
-              </div>
-
-              {/* Job Matches */}
-              <div className="bg-card rounded-2xl shadow-lg p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <Briefcase className="w-6 h-6 text-secondary" />
-                  <h3 className="text-lg font-semibold text-foreground">Matching Jobs</h3>
+                <div className="mt-4 text-xs text-muted-foreground">
+                  {results.length} skills assessed • 30 questions
                 </div>
-
-                <div className="space-y-4">
-                  {mockJobs.map((job, index) => (
-                    <motion.div
-                      key={job.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.6 + index * 0.1 }}
-                      className="p-4 bg-muted rounded-xl hover:bg-muted/80 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-medium text-foreground">{job.title}</h4>
-                          <p className="text-sm text-muted-foreground">{job.company}</p>
-                        </div>
-                        <span className="px-2 py-1 bg-success/20 text-success rounded-md text-xs font-medium">
-                          {job.match}% Match
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {job.location}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {job.type}
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-
-                <Button variant="secondary" className="w-full mt-4">
-                  View All Jobs
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
               </div>
             </motion.div>
+
+            {/* Skill Fingerprint - spans 2 columns */}
+            <div className="lg:col-span-2">
+              <SkillFingerprint results={results} />
+            </div>
           </div>
+
+          {/* Row 2: Skill Scores */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-8"
+          >
+            <div className="bg-card rounded-2xl shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <TrendingUp className="w-6 h-6 text-secondary" />
+                <h3 className="text-xl font-semibold text-foreground">Skill Evaluation</h3>
+              </div>
+              <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+                {results.map((result, index) => (
+                  <motion.div
+                    key={result.skill}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + index * 0.05 }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground text-sm">{result.skill}</span>
+                        <span className="px-1.5 py-0.5 bg-muted rounded text-[10px] text-muted-foreground">
+                          {result.level}
+                        </span>
+                      </div>
+                      <span className={`font-bold text-sm ${getScoreColor(result.score)}`}>
+                        {result.score}%
+                      </span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${result.score}%` }}
+                        transition={{ delay: 0.5 + index * 0.05, duration: 0.6 }}
+                        className={`h-full rounded-full ${getProgressColor(result.score)}`}
+                      />
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Row 3: Job Role Probability */}
+          <div className="mb-8">
+            <JobRoleProbability results={results} parsedResume={parsedResume} />
+          </div>
+
+          {/* Row 4: AI Job Search */}
+          <div className="mb-8">
+            <AIJobSearch results={results} parsedResume={parsedResume} />
+          </div>
+
+          {/* Row 5: Skills to Learn */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="bg-card rounded-2xl shadow-lg p-6 mb-8"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <BookOpen className="w-6 h-6 text-secondary" />
+              <h3 className="text-xl font-semibold text-foreground">Recommended Skills to Learn</h3>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {suggestedSkills.map((item, index) => (
+                <motion.div
+                  key={item.skill}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 + index * 0.1 }}
+                  className="p-4 bg-muted rounded-xl"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Star className="w-4 h-4 text-secondary" />
+                    <span className="font-medium text-foreground">{item.skill}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{item.reason}</p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
 
           {/* Actions */}
           <motion.div

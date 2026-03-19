@@ -9,3 +9,9 @@ verify_jwt = false
 
 [functions.generate-questions]
 verify_jwt = false
+
+[functions.predict-job-roles]
+verify_jwt = false
+
+[functions.search-jobs]
+verify_jwt = false
