@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import NotificationBell from "@/components/NotificationBell";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -36,6 +37,7 @@ const Header = () => {
             <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
               Pricing
             </a>
+            <NotificationBell />
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
@@ -63,6 +65,9 @@ const Header = () => {
               <>
                 <Link to="/auth">
                   <Button variant="ghost">Sign In</Button>
+                </Link>
+                <Link to="/company/auth">
+                  <Button variant="outline" size="sm">For Companies</Button>
                 </Link>
                 <Link to="/auth">
                   <Button variant="hero">Get Started</Button>
