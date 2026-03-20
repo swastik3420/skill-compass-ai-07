@@ -66,6 +66,9 @@ const Header = () => {
                 <Link to="/auth">
                   <Button variant="ghost">Sign In</Button>
                 </Link>
+                <Link to="/company/auth">
+                  <Button variant="outline" size="sm">For Companies</Button>
+                </Link>
                 <Link to="/auth">
                   <Button variant="hero">Get Started</Button>
                 </Link>
