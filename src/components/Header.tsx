@@ -37,6 +37,7 @@ const Header = () => {
             <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
               Pricing
             </a>
+            <NotificationBell />
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
