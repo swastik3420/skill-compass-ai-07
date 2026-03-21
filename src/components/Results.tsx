@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { TrendingUp, BookOpen, Award, ArrowRight, Star, Save, Loader2 } from "lucide-react";
+import { TrendingUp, Award, ArrowRight, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +10,8 @@ import type { ParsedResume } from "@/lib/api/career";
 import SkillFingerprint from "@/components/SkillFingerprint";
 import JobRoleProbability from "@/components/JobRoleProbability";
 import AIJobSearch from "@/components/AIJobSearch";
+import CareerRoadmap from "@/components/CareerRoadmap";
+import RecommendedSkills from "@/components/RecommendedSkills";
 
 interface SkillResult {
   skill: string;
