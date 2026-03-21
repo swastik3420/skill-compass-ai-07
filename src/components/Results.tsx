@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { TrendingUp, BookOpen, Award, ArrowRight, Star, Save, Loader2 } from "lucide-react";
+import { TrendingUp, Award, ArrowRight, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +10,8 @@ import type { ParsedResume } from "@/lib/api/career";
 import SkillFingerprint from "@/components/SkillFingerprint";
 import JobRoleProbability from "@/components/JobRoleProbability";
 import AIJobSearch from "@/components/AIJobSearch";
+import CareerRoadmap from "@/components/CareerRoadmap";
+import RecommendedSkills from "@/components/RecommendedSkills";
 
 interface SkillResult {
   skill: string;
@@ -87,12 +89,6 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
     return "bg-destructive";
   };
 
-  const suggestedSkills = [
-    { skill: "GraphQL", reason: "High demand in modern web development" },
-    { skill: "Docker", reason: "Essential for deployment and DevOps" },
-    { skill: "Testing (Jest/Vitest)", reason: "Improves code quality and employability" },
-    { skill: "System Design", reason: "Required for senior roles" }
-  ];
 
   return (
     <section className="py-20 min-h-screen">
@@ -256,40 +252,20 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
             <JobRoleProbability results={results} parsedResume={parsedResume} />
           </div>
 
-          {/* Row 4: AI Job Search */}
+          {/* Row 4: AI Job Search with Filters */}
           <div className="mb-8">
             <AIJobSearch results={results} parsedResume={parsedResume} />
           </div>
 
-          {/* Row 5: Skills to Learn */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="bg-card rounded-2xl shadow-lg p-6 mb-8"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <BookOpen className="w-6 h-6 text-secondary" />
-              <h3 className="text-xl font-semibold text-foreground">Recommended Skills to Learn</h3>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {suggestedSkills.map((item, index) => (
-                <motion.div
-                  key={item.skill}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7 + index * 0.1 }}
-                  className="p-4 bg-muted rounded-xl"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star className="w-4 h-4 text-secondary" />
-                    <span className="font-medium text-foreground">{item.skill}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{item.reason}</p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+          {/* Row 5: Career Roadmap */}
+          <div className="mb-8">
+            <CareerRoadmap results={results} parsedResume={parsedResume} />
+          </div>
+
+          {/* Row 6: Skills to Learn with Course Links */}
+          <div className="mb-8">
+            <RecommendedSkills results={results} />
+          </div>
 
           {/* Actions */}
           <motion.div
