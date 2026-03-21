@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Briefcase, MapPin, Clock, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { Briefcase, MapPin, Clock, ExternalLink, Loader2, RefreshCw, Filter, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import type { ParsedResume } from "@/lib/api/career";
 
@@ -20,6 +22,10 @@ interface JobListing {
   url: string;
   source: string;
   postedDate?: string;
+  salary?: number;
+  salaryMin?: number;
+  salaryMax?: number;
+  workMode?: string;
 }
 
 interface AIJobSearchProps {
@@ -30,6 +36,19 @@ interface AIJobSearchProps {
 const AIJobSearch = ({ results, parsedResume }: AIJobSearchProps) => {
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filters
+  const [currency, setCurrency] = useState<string>("INR");
+  const [salaryRange, setSalaryRange] = useState<number[]>([0, 5000000]);
+  const [workMode, setWorkMode] = useState<string>("all");
+
+  const salaryMax = currency === "INR" ? 5000000 : 250000;
+  const salaryStep = currency === "INR" ? 100000 : 5000;
+
+  useEffect(() => {
+    setSalaryRange([0, salaryMax]);
+  }, [currency, salaryMax]);
 
   useEffect(() => {
     searchJobs();
@@ -59,6 +78,27 @@ const AIJobSearch = ({ results, parsedResume }: AIJobSearchProps) => {
     }
   };
 
+  const filteredJobs = useMemo(() => {
+    return jobs.filter(job => {
+      // Work mode filter
+      if (workMode !== "all") {
+        const jobMode = (job.workMode || job.type || "").toLowerCase();
+        if (workMode === "remote" && !jobMode.includes("remote")) return false;
+        if (workMode === "onsite" && !jobMode.includes("on-site") && !jobMode.includes("onsite") && !jobMode.includes("office")) return false;
+        if (workMode === "wfh" && !jobMode.includes("home") && !jobMode.includes("wfh") && !jobMode.includes("hybrid")) return false;
+      }
+      return true;
+    });
+  }, [jobs, salaryRange, workMode, currency]);
+
+  const formatSalary = (val: number) => {
+    if (currency === "INR") {
+      if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
+      return `₹${val.toLocaleString("en-IN")}`;
+    }
+    return `$${(val / 1000).toFixed(0)}K`;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -66,28 +106,106 @@ const AIJobSearch = ({ results, parsedResume }: AIJobSearchProps) => {
       transition={{ delay: 0.5 }}
       className="bg-card rounded-2xl shadow-lg p-6"
     >
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <Briefcase className="w-6 h-6 text-secondary" />
           <h3 className="text-xl font-semibold text-foreground">AI-Powered Job Matches</h3>
         </div>
-        <Button variant="ghost" size="sm" onClick={searchJobs} disabled={isLoading}>
-          <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showFilters ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="w-4 h-4 mr-1" />
+            Filters
+          </Button>
+          <Button variant="ghost" size="sm" onClick={searchJobs} disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          className="mb-6 p-4 bg-muted rounded-xl space-y-4"
+        >
+          <div className="grid sm:grid-cols-3 gap-4">
+            {/* Currency */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                <DollarSign className="w-3 h-3 inline mr-1" />
+                Salary Currency
+              </label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="INR">₹ INR</SelectItem>
+                  <SelectItem value="USD">$ USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Work Mode */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                <MapPin className="w-3 h-3 inline mr-1" />
+                Work Location
+              </label>
+              <Select value={workMode} onValueChange={setWorkMode}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="remote">Remote</SelectItem>
+                  <SelectItem value="wfh">Work from Home / Hybrid</SelectItem>
+                  <SelectItem value="onsite">On-site</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Salary Range */}
+            <div className="sm:col-span-1">
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Salary Range
+              </label>
+              <div className="pt-1">
+                <Slider
+                  min={0}
+                  max={salaryMax}
+                  step={salaryStep}
+                  value={salaryRange}
+                  onValueChange={setSalaryRange}
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                  <span>{formatSalary(salaryRange[0])}</span>
+                  <span>{formatSalary(salaryRange[1])}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-muted-foreground">Finding matching jobs...</span>
         </div>
-      ) : jobs.length === 0 ? (
+      ) : filteredJobs.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          <p>No matching jobs found. Try refreshing.</p>
+          <p>No matching jobs found. Try adjusting filters or refreshing.</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
-          {jobs.map((job, index) => (
+          {filteredJobs.map((job, index) => (
             <motion.a
               key={index}
               href={job.url}
