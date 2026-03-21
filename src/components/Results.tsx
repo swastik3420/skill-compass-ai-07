@@ -89,12 +89,6 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
     return "bg-destructive";
   };
 
-  const suggestedSkills = [
-    { skill: "GraphQL", reason: "High demand in modern web development" },
-    { skill: "Docker", reason: "Essential for deployment and DevOps" },
-    { skill: "Testing (Jest/Vitest)", reason: "Improves code quality and employability" },
-    { skill: "System Design", reason: "Required for senior roles" }
-  ];
 
   return (
     <section className="py-20 min-h-screen">
