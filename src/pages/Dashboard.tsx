@@ -3,9 +3,11 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   User, TrendingUp, Award, Calendar, ChevronRight, 
-  LogOut, Loader2, Target, BookOpen, Trash2
+  LogOut, Loader2, Target, BookOpen, Trash2, Briefcase,
+  Clock, CheckCircle2, XCircle, MapPin, Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
