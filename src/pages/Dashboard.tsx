@@ -3,9 +3,11 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   User, TrendingUp, Award, Calendar, ChevronRight, 
-  LogOut, Loader2, Target, BookOpen, Trash2
+  LogOut, Loader2, Target, BookOpen, Trash2, Briefcase,
+  Clock, CheckCircle2, XCircle, MapPin, Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -29,9 +31,27 @@ interface AssessmentScore {
   level: string;
 }
 
+interface JobApplication {
+  id: string;
+  job_id: string;
+  status: string;
+  created_at: string;
+  job_listings: {
+    title: string;
+    location: string | null;
+    job_type: string | null;
+    experience_level: string | null;
+    companies: {
+      name: string;
+    };
+  };
+}
+
 const Dashboard = () => {
   const { user, profile, isLoading, signOut } = useAuth();
   const [assessments, setAssessments] = useState<AssessmentResult[]>([]);
+  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(true);
   const [loadingAssessments, setLoadingAssessments] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -45,8 +65,26 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       fetchAssessments();
+      fetchApplications();
     }
   }, [user]);
+
+  const fetchApplications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('job_applications')
+        .select('id, job_id, status, created_at, job_listings(title, location, job_type, experience_level, companies(name))')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setApplications((data as unknown as JobApplication[]) || []);
+    } catch (err) {
+      console.error('Error fetching applications:', err);
+    } finally {
+      setLoadingApplications(false);
+    }
+  };
 
   const fetchAssessments = async () => {
     try {
@@ -206,7 +244,93 @@ const Dashboard = () => {
             </div>
           </motion.div>
 
-          {/* Assessment History */}
+          {/* Job Applications */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mb-8"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <Briefcase className="w-6 h-6 text-secondary" />
+              <h2 className="text-2xl font-bold text-foreground">Job Applications</h2>
+              {applications.length > 0 && (
+                <Badge variant="secondary" className="text-xs">{applications.length}</Badge>
+              )}
+            </div>
+
+            {loadingApplications ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-secondary" />
+              </div>
+            ) : applications.length === 0 ? (
+              <div className="bg-card rounded-2xl p-8 text-center shadow-lg">
+                <div className="w-14 h-14 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <Briefcase className="w-7 h-7 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-1">No applications yet</h3>
+                <p className="text-sm text-muted-foreground">
+                  Complete an assessment to discover and apply to matching jobs
+                </p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {applications.map((app, index) => {
+                  const statusConfig = {
+                    pending: { icon: Clock, color: "text-warning", bg: "bg-warning/15", label: "Pending" },
+                    accepted: { icon: CheckCircle2, color: "text-success", bg: "bg-success/15", label: "Accepted" },
+                    rejected: { icon: XCircle, color: "text-destructive", bg: "bg-destructive/15", label: "Rejected" },
+                    reviewed: { icon: Award, color: "text-secondary", bg: "bg-secondary/15", label: "Reviewed" },
+                  }[app.status] || { icon: Clock, color: "text-muted-foreground", bg: "bg-muted", label: app.status };
+
+                  const StatusIcon = statusConfig.icon;
+
+                  return (
+                    <motion.div
+                      key={app.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="bg-card rounded-xl p-5 shadow-lg border border-border/50"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-foreground truncate">{app.job_listings?.title}</h4>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">{app.job_listings?.companies?.name}</span>
+                          </div>
+                        </div>
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${statusConfig.bg}`}>
+                          <StatusIcon className={`w-3.5 h-3.5 ${statusConfig.color}`} />
+                          <span className={`text-xs font-medium ${statusConfig.color}`}>{statusConfig.label}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3 flex-wrap">
+                        {app.job_listings?.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />{app.job_listings.location}
+                          </span>
+                        )}
+                        {app.job_listings?.job_type && (
+                          <span className="flex items-center gap-1">
+                            <Briefcase className="w-3 h-3" />{app.job_listings.job_type}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <Calendar className="w-3 h-3" />
+                        Applied {new Date(app.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
