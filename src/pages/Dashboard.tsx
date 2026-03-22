@@ -65,8 +65,26 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       fetchAssessments();
+      fetchApplications();
     }
   }, [user]);
+
+  const fetchApplications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('job_applications')
+        .select('id, job_id, status, created_at, job_listings(title, location, job_type, experience_level, companies(name))')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setApplications((data as unknown as JobApplication[]) || []);
+    } catch (err) {
+      console.error('Error fetching applications:', err);
+    } finally {
+      setLoadingApplications(false);
+    }
+  };
 
   const fetchAssessments = async () => {
     try {
