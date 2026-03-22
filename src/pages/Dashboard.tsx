@@ -31,9 +31,27 @@ interface AssessmentScore {
   level: string;
 }
 
+interface JobApplication {
+  id: string;
+  job_id: string;
+  status: string;
+  created_at: string;
+  job_listings: {
+    title: string;
+    location: string | null;
+    job_type: string | null;
+    experience_level: string | null;
+    companies: {
+      name: string;
+    };
+  };
+}
+
 const Dashboard = () => {
   const { user, profile, isLoading, signOut } = useAuth();
   const [assessments, setAssessments] = useState<AssessmentResult[]>([]);
+  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(true);
   const [loadingAssessments, setLoadingAssessments] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
