@@ -71,10 +71,10 @@ serve(async (req) => {
 
 ## Requirements
 
-Generate exactly 30 questions total:
-- 10 Basic difficulty questions
-- 10 Intermediate difficulty questions  
-- 10 Advanced difficulty questions
+Generate exactly ${totalQuestions} questions total:
+- ${basicCount} Basic difficulty questions
+- ${intermediateCount} Intermediate difficulty questions
+- ${advancedCount} Advanced difficulty questions
 
 Distribute questions across ALL the skills listed above to maximize coverage. Each skill should have at least 1 question. Spread the remaining questions to cover more aspects of each skill.
 
