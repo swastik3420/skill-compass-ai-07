@@ -64,11 +64,12 @@ export async function parseResume(resumeText: string): Promise<ApiResponse<Parse
  */
 export async function generateQuestions(
   skills: ParsedSkill[],
-  experienceLevel: string
+  experienceLevel: string,
+  count?: number
 ): Promise<ApiResponse<Question[]>> {
   try {
     const { data, error } = await supabase.functions.invoke('generate-questions', {
-      body: { skills, experienceLevel }
+      body: { skills, experienceLevel, count }
     });
 
     if (error) {
