@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { parseResume, extractResumeText, type ParsedResume } from "@/lib/api/career";
 import { useToast } from "@/components/ui/use-toast";
+import AILoadingOverlay from "@/components/AILoadingOverlay";
 
 interface ResumeUploadProps {
   onFileUploaded: (file: File) => void;
