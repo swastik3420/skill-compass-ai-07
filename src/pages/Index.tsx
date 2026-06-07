@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
@@ -9,6 +9,7 @@ import Features from "@/components/Features";
 import Footer from "@/components/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { type ParsedResume } from "@/lib/api/career";
+import { useAppFlow } from "@/contexts/AppFlowContext";
 
 type AppState = "landing" | "upload" | "assessment" | "results";
 
