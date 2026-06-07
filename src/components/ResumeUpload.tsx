@@ -124,6 +124,17 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
 
   return (
     <section id="upload" className="py-20">
+      <AILoadingOverlay
+        isLoading={isProcessing}
+        title={processingStatus || "Scanning Resume for Keywords..."}
+        messages={[
+          "Scanning Resume for Keywords...",
+          "Extracting core competencies...",
+          "Identifying educational milestones...",
+          "Parsing certifications and achievements...",
+          "Structuring your professional digital twin...",
+        ]}
+      />
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
