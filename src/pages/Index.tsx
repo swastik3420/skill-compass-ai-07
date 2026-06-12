@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
-import HowItWorks from "@/components/HowItWorks";
 import ResumeUpload from "@/components/ResumeUpload";
 import SkillAssessment from "@/components/SkillAssessment";
 import Results from "@/components/Results";
@@ -84,7 +83,6 @@ const Index = () => {
       {appState === "landing" && (
         <>
           <Hero onGetStarted={handleGetStarted} />
-          <HowItWorks />
           <Features />
         </>
       )}
