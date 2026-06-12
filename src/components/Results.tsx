@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { TrendingUp, Award, ArrowRight, Save, Loader2 } from "lucide-react";
+import { TrendingUp, Award, ArrowRight, Save, Loader2, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -94,6 +94,12 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
     <section className="py-20 min-h-screen">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
+          <div className="pt-4">
+            <Button variant="outline" size="sm" className="gap-2" onClick={onRestart}>
+              <Home className="w-4 h-4" />
+              Back to Home
+            </Button>
+          </div>
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
