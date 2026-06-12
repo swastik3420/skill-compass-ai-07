@@ -1,4 +1,4 @@
-import { ArrowRight, Sparkles, Upload, Target, Briefcase, Zap } from "lucide-react";
+import { ArrowRight, Sparkles, Upload, Target, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
@@ -84,22 +84,18 @@ const Hero = ({ onGetStarted }: HeroProps) => {
             and get matched with roles that actually fit.
           </motion.p>
 
-          {/* CTA Buttons */}
+          {/* CTA Button */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.45 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+            className="flex items-center justify-center gap-4 mb-16"
           >
             <Button variant="hero" size="xl" onClick={onGetStarted} className="group relative overflow-hidden">
               <span className="relative z-10 flex items-center gap-2">
                 Analyze My Resume
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </span>
-            </Button>
-            <Button variant="hero-outline" size="xl" className="group">
-              <Zap className="w-4 h-4 text-accent transition-transform group-hover:scale-110" />
-              See How It Works
             </Button>
           </motion.div>
 
