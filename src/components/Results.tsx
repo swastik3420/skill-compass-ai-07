@@ -94,6 +94,14 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
     <section className="py-20 min-h-screen">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
+          <div className="pt-4">
+            <Link to="/">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Home className="w-4 h-4" />
+                Back to Home
+              </Button>
+            </Link>
+          </div>
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
