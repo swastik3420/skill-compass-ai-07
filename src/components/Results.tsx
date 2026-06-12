@@ -95,12 +95,10 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
           <div className="pt-4">
-            <Link to="/">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Home className="w-4 h-4" />
-                Back to Home
-              </Button>
-            </Link>
+            <Button variant="outline" size="sm" className="gap-2" onClick={onRestart}>
+              <Home className="w-4 h-4" />
+              Back to Home
+            </Button>
           </div>
           {/* Header */}
           <motion.div
