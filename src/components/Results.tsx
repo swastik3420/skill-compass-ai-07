@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { TrendingUp, Award, ArrowRight, Save, Loader2 } from "lucide-react";
+import { TrendingUp, Award, ArrowRight, Save, Loader2, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
