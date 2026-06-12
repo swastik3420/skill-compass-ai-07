@@ -89,7 +89,7 @@ const Hero = ({ onGetStarted }: HeroProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.45 }}
-            className="flex items-center justify-center gap-4 mb-16"
+            className="flex flex-col items-center justify-center gap-3 mb-12"
           >
             <Button variant="hero" size="xl" onClick={onGetStarted} className="group relative overflow-hidden">
               <span className="relative z-10 flex items-center gap-2">
@@ -97,6 +97,13 @@ const Hero = ({ onGetStarted }: HeroProps) => {
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </span>
             </Button>
+            <p className="text-sm text-muted-foreground">
+              Sign up to save your progress, or{" "}
+              <span className="text-primary font-medium cursor-pointer hover:underline" onClick={onGetStarted}>
+                start for free
+              </span>
+              {" "}— no account needed.
+            </p>
           </motion.div>
 
           {/* Stats / Social proof row */}
