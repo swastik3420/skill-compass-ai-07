@@ -13,6 +13,19 @@ serve(async (req) => {
   try {
     const { skills, experienceLevel, industries, jobTitles } = await req.json();
 
+    if (!Array.isArray(skills) || skills.length === 0) {
+      return new Response(JSON.stringify({ error: 'skills array required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    if (skills.length > 50 || (Array.isArray(industries) && industries.length > 20) || (Array.isArray(jobTitles) && jobTitles.length > 20)) {
+      console.warn('Oversized payload rejected');
+      return new Response(JSON.stringify({ error: 'Input arrays exceed allowed limits.' }), { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const trunc = (v: unknown, n: number) => typeof v === 'string' ? v.slice(0, n) : v;
+    const boundedSkills = skills.slice(0, 50).map((s: any) => typeof s === 'string' ? s.slice(0, 200) : { ...s, name: trunc(s?.name, 200) });
+    const boundedIndustries = Array.isArray(industries) ? industries.slice(0, 20).map((i: any) => trunc(i, 100)) : [];
+    const boundedJobTitles = Array.isArray(jobTitles) ? jobTitles.slice(0, 20).map((i: any) => trunc(i, 150)) : [];
+    const boundedExperience = typeof experienceLevel === 'string' ? experienceLevel.slice(0, 100) : experienceLevel;
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       return new Response(
