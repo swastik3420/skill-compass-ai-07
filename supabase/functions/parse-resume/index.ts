@@ -170,7 +170,7 @@ IMPORTANT: Extract at least 5-10 skills minimum. If the text is messy or short, 
   } catch (error) {
     console.error('Error in parse-resume:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'An unexpected error occurred.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -13,6 +13,19 @@ serve(async (req) => {
   try {
     const { skills, experienceLevel, industries, jobTitles } = await req.json();
 
+    if (!Array.isArray(skills) || skills.length === 0) {
+      return new Response(JSON.stringify({ error: 'skills array required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    if (skills.length > 50 || (Array.isArray(industries) && industries.length > 20) || (Array.isArray(jobTitles) && jobTitles.length > 20)) {
+      console.warn('Oversized payload rejected');
+      return new Response(JSON.stringify({ error: 'Input arrays exceed allowed limits.' }), { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const trunc = (v: unknown, n: number) => typeof v === 'string' ? v.slice(0, n) : v;
+    const boundedSkills = skills.slice(0, 50).map((s: any) => typeof s === 'string' ? s.slice(0, 200) : { ...s, name: trunc(s?.name, 200) });
+    const boundedIndustries = Array.isArray(industries) ? industries.slice(0, 20).map((i: any) => trunc(i, 100)) : [];
+    const boundedJobTitles = Array.isArray(jobTitles) ? jobTitles.slice(0, 20).map((i: any) => trunc(i, 150)) : [];
+    const boundedExperience = typeof experienceLevel === 'string' ? experienceLevel.slice(0, 100) : experienceLevel;
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       return new Response(
@@ -21,7 +34,7 @@ serve(async (req) => {
       );
     }
 
-    const skillList = skills.map((s: any) => `${s.name} (score: ${s.score}%, level: ${s.level})`).join(', ');
+    const skillList = boundedSkills.map((s: any) => `${s.name} (score: ${s.score}%, level: ${s.level})`).join(', ');
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -40,9 +53,9 @@ serve(async (req) => {
             role: 'user',
             content: `Candidate profile:
 - Skills: ${skillList}
-- Experience: ${experienceLevel}
-- Industries: ${(industries || []).join(', ') || 'Not specified'}
-- Previous titles: ${(jobTitles || []).join(', ') || 'Not specified'}
+- Experience: ${boundedExperience}
+- Industries: ${boundedIndustries.join(', ') || 'Not specified'}
+- Previous titles: ${boundedJobTitles.join(', ') || 'Not specified'}
 
 Return ONLY a JSON object like: {"roles": [{"role": "Frontend Developer", "probability": 87}, ...]}`
           }
@@ -80,7 +93,7 @@ Return ONLY a JSON object like: {"roles": [{"role": "Frontend Developer", "proba
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'An unexpected error occurred.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

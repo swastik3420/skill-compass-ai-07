@@ -14,6 +14,19 @@ serve(async (req) => {
   try {
     const { skills, experienceLevel, jobTitles, industries } = await req.json();
 
+    if (!Array.isArray(skills)) {
+      return new Response(JSON.stringify({ error: 'skills must be an array' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    if (skills.length > 50 || (Array.isArray(industries) && industries.length > 20) || (Array.isArray(jobTitles) && jobTitles.length > 20)) {
+      console.warn('Oversized payload rejected');
+      return new Response(JSON.stringify({ error: 'Input arrays exceed allowed limits.' }), { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const trunc = (v: unknown, n: number) => typeof v === 'string' ? v.slice(0, n) : v;
+    const boundedSkills = skills.slice(0, 50).map((s: any) => typeof s === 'string' ? s.slice(0, 200) : { ...s, name: trunc(s?.name, 200), skill: trunc(s?.skill, 200) });
+    const boundedIndustries = Array.isArray(industries) ? industries.slice(0, 20).map((i: any) => trunc(i, 100)) : [];
+    const boundedJobTitles = Array.isArray(jobTitles) ? jobTitles.slice(0, 20).map((i: any) => trunc(i, 150)) : [];
+    const boundedExperience = typeof experienceLevel === 'string' ? experienceLevel.slice(0, 100) : experienceLevel;
+
     // Fetch company-posted jobs from database
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -26,7 +39,7 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(20);
 
-    const userSkills = skills.map((s: any) => (s.name || s.skill || '').toLowerCase());
+    const userSkills = boundedSkills.map((s: any) => (s.name || s.skill || '').toLowerCase());
 
     const companyJobs = (dbJobs || []).map((job: any) => {
       const requiredSkills = (job.skills_required || []).map((s: string) => s.toLowerCase());
@@ -59,7 +72,7 @@ serve(async (req) => {
     let aiJobs: any[] = [];
 
     if (LOVABLE_API_KEY) {
-      const topSkills = skills
+      const topSkills = boundedSkills
         .sort((a: any, b: any) => b.score - a.score)
         .slice(0, 6)
         .map((s: any) => s.name || s.skill)
@@ -83,9 +96,9 @@ serve(async (req) => {
                 role: 'user',
                 content: `Find 6 matching jobs for this candidate:
 - Top skills: ${topSkills}
-- Experience: ${experienceLevel}
-- Previous roles: ${(jobTitles || []).join(', ') || 'Not specified'}
-- Industries: ${(industries || []).join(', ') || 'Not specified'}
+- Experience: ${boundedExperience}
+- Previous roles: ${boundedJobTitles.join(', ') || 'Not specified'}
+- Industries: ${boundedIndustries.join(', ') || 'Not specified'}
 
 Return ONLY a JSON object:
 {"jobs": [{"title": "...", "company": "...", "location": "...", "type": "Full-time", "match": 92, "url": "https://...", "source": "LinkedIn", "postedDate": "Recent"}]}`
@@ -118,7 +131,7 @@ Return ONLY a JSON object:
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'An unexpected error occurred.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
