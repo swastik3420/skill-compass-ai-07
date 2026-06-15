@@ -34,7 +34,7 @@ serve(async (req) => {
       );
     }
 
-    const skillList = skills.map((s: any) => `${s.name} (score: ${s.score}%, level: ${s.level})`).join(', ');
+    const skillList = boundedSkills.map((s: any) => `${s.name} (score: ${s.score}%, level: ${s.level})`).join(', ');
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
