@@ -53,9 +53,9 @@ serve(async (req) => {
             role: 'user',
             content: `Candidate profile:
 - Skills: ${skillList}
-- Experience: ${experienceLevel}
-- Industries: ${(industries || []).join(', ') || 'Not specified'}
-- Previous titles: ${(jobTitles || []).join(', ') || 'Not specified'}
+- Experience: ${boundedExperience}
+- Industries: ${boundedIndustries.join(', ') || 'Not specified'}
+- Previous titles: ${boundedJobTitles.join(', ') || 'Not specified'}
 
 Return ONLY a JSON object like: {"roles": [{"role": "Frontend Developer", "probability": 87}, ...]}`
           }
