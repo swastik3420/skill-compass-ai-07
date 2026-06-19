@@ -1,13 +1,15 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Camera, Loader2, Save, User, Plus, Trash2, FileText, GraduationCap, Award, Upload } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, Save, User, Plus, Trash2, FileText, GraduationCap, Award, Upload, ZapOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useReduceMotion } from "@/hooks/useReduceMotion";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
