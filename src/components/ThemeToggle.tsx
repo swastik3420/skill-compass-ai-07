@@ -14,9 +14,17 @@ const ThemeToggle = () => {
 
   const toggle = () => {
     const next = !isDark;
-    setIsDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
+    const update = () => {
+      setIsDark(next);
+      document.documentElement.classList.toggle("dark", next);
+      localStorage.setItem("theme", next ? "dark" : "light");
+    };
+
+    if ("startViewTransition" in document) {
+      (document as any).startViewTransition(update);
+    } else {
+      update();
+    }
   };
 
   return (
