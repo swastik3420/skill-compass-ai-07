@@ -14,16 +14,22 @@ const ThemeToggle = () => {
 
   const toggle = () => {
     const next = !isDark;
-    const update = () => {
+    const root = document.documentElement;
+
+    const applyTheme = () => {
       setIsDark(next);
-      document.documentElement.classList.toggle("dark", next);
+      root.classList.toggle("dark", next);
       localStorage.setItem("theme", next ? "dark" : "light");
     };
 
+    // Enable a temporary global transition for backgrounds, text, borders, etc.
+    root.classList.add("theme-transition");
+    window.setTimeout(() => root.classList.remove("theme-transition"), 450);
+
     if ("startViewTransition" in document) {
-      (document as any).startViewTransition(update);
+      (document as any).startViewTransition(applyTheme);
     } else {
-      update();
+      applyTheme();
     }
   };
 
