@@ -207,6 +207,16 @@
     @apply border-border;
   }
 
+  /* Smooth theme transitions on key UI elements when toggling light/dark */
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition: background-color 400ms ease, border-color 400ms ease,
+      color 400ms ease, fill 400ms ease, stroke 400ms ease,
+      box-shadow 400ms ease !important;
+    transition-delay: 0ms !important;
+  }
+
   body {
     @apply bg-background text-foreground font-sans;
   }
