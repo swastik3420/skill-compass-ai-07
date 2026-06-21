@@ -142,7 +142,7 @@ const NotificationBell = () => {
             ) : (
               <div className="p-8 text-center flex flex-col items-center justify-center text-muted-foreground">
                 <Newspaper className="h-8 w-8 mb-2 opacity-50" />
-                <p className="text-xs font-bold">Gathering latest intelligence...</p>
+                <p className="text-xs font-bold">Sign in to see latest intelligence.</p>
               </div>
             )}
           </div>
