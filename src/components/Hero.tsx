@@ -1,12 +1,15 @@
-import { ArrowRight, Sparkles, Upload, Target, Briefcase } from "lucide-react";
+import { ArrowRight, Sparkles, Upload, Target, Briefcase, FileSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import ATSScoreDialog from "@/components/ATSScoreDialog";
 
 interface HeroProps {
   onGetStarted: () => void;
 }
 
 const Hero = ({ onGetStarted }: HeroProps) => {
+  const [atsOpen, setAtsOpen] = useState(false);
   return (
     <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
       {/* Animated mesh background */}
