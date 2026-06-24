@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS "Users can delete their own assessments" ON public.assessment_results;
+CREATE POLICY "Users can delete their own assessments" ON public.assessment_results FOR DELETE TO authenticated USING (auth.uid() = user_id);
