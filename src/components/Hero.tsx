@@ -10,12 +10,11 @@ interface HeroProps {
 }
 
 const roleChips = [
-  { icon: BarChart3, label: "Data Scientist", top: "8%" },
-  { icon: BrainCircuit, label: "AI Engineer", top: "22%" },
-  { icon: Users, label: "Product Manager", top: "40%" },
-  { icon: Shield, label: "Cybersecurity", top: "58%" },
-  { icon: Cloud, label: "Cloud Architect", top: "74%" },
-  { icon: Pencil, label: "UX Designer", top: "90%" },
+  { icon: BarChart3, label: "Data Scientist", left: "2%", top: "14%" },
+  { icon: BrainCircuit, label: "AI Engineer", left: "20%", top: "2%" },
+  { icon: Users, label: "Product Manager", left: "44%", top: "-4%" },
+  { icon: Shield, label: "Cybersecurity", left: "70%", top: "2%" },
+  { icon: Cloud, label: "Cloud Architect", left: "88%", top: "14%" },
 ];
 
 const trustedLogos = ["Google", "Microsoft", "Amazon", "Netflix", "Meta", "Adobe"];
@@ -210,11 +209,11 @@ const Hero = ({ onGetStarted }: HeroProps) => {
             {roleChips.map((chip, i) => (
               <motion.div
                 key={chip.label}
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.6 + i * 0.08 }}
-                className="absolute right-0 sm:-right-2 md:right-0 lg:-right-4 glass rounded-full px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 border border-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.25)]"
-                style={{ top: chip.top }}
+                className="absolute glass rounded-full px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 border border-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.25)] -translate-x-1/2"
+                style={{ top: chip.top, left: chip.left }}
               >
                 <chip.icon className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
                 <span className="text-xs md:text-sm font-medium text-foreground whitespace-nowrap">{chip.label}</span>
