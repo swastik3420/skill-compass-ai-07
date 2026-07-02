@@ -185,7 +185,7 @@ const Hero = ({ onGetStarted }: HeroProps) => {
               width={1024}
               height={1024}
               className="absolute inset-0 w-full h-full object-contain select-none pointer-events-none transition-all duration-700
-                opacity-45 blur-[0.5px] mix-blend-screen saturate-125 contrast-95 [filter:hue-rotate(155deg)_brightness(1.35)_saturate(1.4)]
+                opacity-35 mix-blend-multiply [filter:saturate(0.2)_brightness(1.3)_contrast(0.8)_hue-rotate(215deg)_drop-shadow(0_0_20px_rgba(255,255,255,0.75))_drop-shadow(0_0_40px_rgba(210,200,255,0.4))]
                 dark:[filter:none] dark:opacity-95 dark:blur-0 dark:mix-blend-screen dark:saturate-125 dark:contrast-100
                 [mask-image:radial-gradient(ellipse_at_50%_50%,black_45%,transparent_78%)]
                 [-webkit-mask-image:radial-gradient(ellipse_at_50%_50%,black_45%,transparent_78%)]
