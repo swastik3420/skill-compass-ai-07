@@ -255,7 +255,11 @@ const Hero = ({ onGetStarted }: HeroProps) => {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.8 + i * 0.05 }}
-                className="absolute text-[10px] sm:text-xs md:text-sm font-semibold whitespace-nowrap text-pink-500 dark:text-pink-400 [text-shadow:0_0_10px_hsl(330_90%_65%/0.7)] pointer-events-none select-none"
+                className={`absolute text-[10px] sm:text-xs md:text-sm font-bold whitespace-nowrap pointer-events-none select-none italic ${
+                  p.tone === "pink"
+                    ? "text-pink-500 dark:text-pink-400 [text-shadow:0_0_12px_hsl(325_95%_60%/0.85)]"
+                    : "text-cyan-500 dark:text-cyan-300 [text-shadow:0_0_12px_hsl(190_95%_60%/0.85)]"
+                }`}
                 style={{ top: p.top, left: p.left }}
               >
                 {p.label}
