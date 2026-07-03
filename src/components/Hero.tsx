@@ -247,6 +247,47 @@ const Hero = ({ onGetStarted }: HeroProps) => {
                 <span className="text-xs md:text-sm font-medium text-foreground whitespace-nowrap transition-colors duration-300 group-hover:text-primary">{chip.label}</span>
               </motion.div>
             ))}
+
+            {/* Pain-point labels (left hemisphere) */}
+            {painLabels.map((p, i) => (
+              <motion.span
+                key={p.label}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.8 + i * 0.05 }}
+                className="absolute text-[10px] sm:text-xs md:text-sm font-semibold whitespace-nowrap text-pink-500 dark:text-pink-400 [text-shadow:0_0_10px_hsl(330_90%_65%/0.7)] pointer-events-none select-none"
+                style={{ top: p.top, left: p.left }}
+              >
+                {p.label}
+              </motion.span>
+            ))}
+
+            {/* Benefit labels (right hemisphere) */}
+            {benefitLabels.map((b, i) => (
+              <motion.span
+                key={b.label}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.9 + i * 0.05 }}
+                className="absolute text-[10px] sm:text-xs md:text-sm font-semibold whitespace-nowrap text-cyan-500 dark:text-cyan-300 [text-shadow:0_0_10px_hsl(190_95%_60%/0.7)] pointer-events-none select-none flex items-center gap-1"
+                style={{ top: b.top, right: b.right }}
+              >
+                {b.label}
+                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-sm bg-emerald-500/90 text-white text-[9px] font-bold">✓</span>
+              </motion.span>
+            ))}
+
+            {/* Center Path4U wordmark over the brain */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 1 }}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
+            >
+              <span className="font-display font-extrabold text-2xl sm:text-3xl md:text-4xl lg:text-5xl gradient-text-vivid [text-shadow:0_0_30px_hsl(var(--primary)/0.6)]">
+                Path4U
+              </span>
+            </motion.div>
           </motion.div>
         </div>
       </div>
