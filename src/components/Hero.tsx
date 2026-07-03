@@ -34,13 +34,13 @@ const painLabels = [
 ] as const;
 
 const benefitLabels = [
-  { label: "Smart Matching",       top: "26%", right: "24%" },
-  { label: "Real-Time Insights",   top: "35%", right: "12%" },
-  { label: "Data-Driven Decisions",top: "46%", right: "8%"  },
-  { label: "Clear Direction",      top: "55%", right: "14%" },
-  { label: "Time Efficient",       top: "61%", right: "18%" },
-  { label: "AI Resume Scoring",    top: "73%", right: "10%" },
-  { label: "Better Opportunities", top: "79%", right: "30%" },
+  { label: "Smart Matching",       top: "26%", right: "16%" },
+  { label: "Real-Time Insights",   top: "35%", right: "4%"  },
+  { label: "Data-Driven Decisions",top: "46%", right: "0%"  },
+  { label: "Clear Direction",      top: "55%", right: "6%"  },
+  { label: "Time Efficient",       top: "61%", right: "10%" },
+  { label: "AI Resume Scoring",    top: "73%", right: "2%"  },
+  { label: "Better Opportunities", top: "79%", right: "22%" },
 ];
 
 const stats = [
