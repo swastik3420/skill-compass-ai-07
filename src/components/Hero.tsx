@@ -174,22 +174,6 @@ const Hero = ({ onGetStarted }: HeroProps) => {
               ))}
             </motion.div>
 
-            {/* Trusted by */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.75 }}
-              className="text-center lg:text-left"
-            >
-              <p className="text-xs text-muted-foreground mb-3">Trusted by professionals at</p>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 opacity-70">
-                {trustedLogos.map((logo) => (
-                  <span key={logo} className="text-sm md:text-base font-semibold text-muted-foreground tracking-wide">
-                    {logo}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
           </div>
 
           {/* RIGHT: brain visual + role chips */}
