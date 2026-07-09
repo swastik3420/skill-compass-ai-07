@@ -1,4 +1,4 @@
-import { ArrowRight, Sparkles, Upload, Target, Briefcase, FileSearch, BarChart3, BrainCircuit, Users, Shield, Cloud, Pencil, TrendingUp, Crosshair } from "lucide-react";
+import { ArrowRight, Sparkles, Upload, Target, Briefcase, FileSearch, BarChart3, BrainCircuit, Users, Shield, Cloud, Pencil, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useState } from "react";
