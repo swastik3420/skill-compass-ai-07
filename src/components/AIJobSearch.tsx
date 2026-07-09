@@ -65,6 +65,23 @@ const AIJobSearch = ({ results, parsedResume }: AIJobSearchProps) => {
     searchJobs();
   }, [results, parsedResume]);
 
+  // Load user's existing applications
+  useEffect(() => {
+    if (!user) return;
+    const loadApplications = async () => {
+      const { data } = await supabase
+        .from('job_applications')
+        .select('job_id')
+        .eq('user_id', user.id);
+      if (data) {
+        setAppliedJobs(new Set(data.map(a => a.job_id)));
+      }
+    };
+    loadApplications();
+  }, [user]);
+
+
+
   const searchJobs = async () => {
     setIsLoading(true);
     try {
