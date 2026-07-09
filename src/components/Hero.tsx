@@ -1,4 +1,4 @@
-import { ArrowRight, Sparkles, Upload, Target, Briefcase, FileSearch, BarChart3, BrainCircuit, Users, Shield, Cloud, Pencil, TrendingUp, Crosshair } from "lucide-react";
+import { ArrowRight, Sparkles, Upload, Target, Briefcase, FileSearch, BarChart3, BrainCircuit, Users, Shield, Cloud, Pencil, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -46,7 +46,6 @@ const benefitLabels = [
 const stats = [
   { icon: Users, value: "100+", label: "Resume Analyzed" },
   { icon: TrendingUp, value: "95%", label: "Accuracy Rate" },
-  { icon: Crosshair, value: "10M+", label: "Data Points" },
   { icon: BrainCircuit, value: "24/7", label: "AI Guidance" },
 ];
 
