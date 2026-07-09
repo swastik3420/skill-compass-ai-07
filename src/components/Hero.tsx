@@ -226,10 +226,10 @@ const Hero = ({ onGetStarted }: HeroProps) => {
                 <div
                   tabIndex={0}
                   role="button"
-                  className="group glass rounded-full px-2 py-1 md:px-2.5 md:py-1.5 flex items-center gap-1.5 border border-primary/30 shadow-[0_0_14px_hsl(var(--primary)/0.25)] -translate-x-1/2 cursor-pointer transition-all duration-300 hover:scale-110 hover:-translate-y-1 hover:border-primary/70 hover:bg-primary/10 hover:shadow-[0_0_24px_hsl(var(--primary)/0.55)] active:scale-95 active:bg-primary/20 active:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                  className="group glass rounded-full px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-2.5 md:py-1.5 flex items-center gap-1 sm:gap-1.5 border border-primary/30 shadow-[0_0_14px_hsl(var(--primary)/0.25)] -translate-x-1/2 cursor-pointer transition-all duration-300 hover:scale-110 hover:-translate-y-1 hover:border-primary/70 hover:bg-primary/10 hover:shadow-[0_0_24px_hsl(var(--primary)/0.55)] active:scale-95 active:bg-primary/20 active:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
-                  <chip.icon className="w-3 h-3 md:w-3.5 md:h-3.5 text-primary transition-transform duration-300 group-hover:scale-110 group-active:scale-95" />
-                  <span className="text-[10px] sm:text-[11px] md:text-xs font-medium text-foreground whitespace-nowrap transition-colors duration-300 group-hover:text-primary">{chip.label}</span>
+                  <chip.icon className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 text-primary transition-transform duration-300 group-hover:scale-110 group-active:scale-95" />
+                  <span className="text-[9px] sm:text-[10px] md:text-xs font-medium text-foreground whitespace-nowrap transition-colors duration-300 group-hover:text-primary">{chip.label}</span>
                 </div>
               </motion.div>
             ))}
