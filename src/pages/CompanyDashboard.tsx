@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { SEO } from "@/components/SEO";
 import {
   Building2, Plus, Briefcase, Users, BarChart3, Settings,
   LogOut, Loader2, Eye, Trash2, ToggleLeft, ToggleRight, MapPin, DollarSign
