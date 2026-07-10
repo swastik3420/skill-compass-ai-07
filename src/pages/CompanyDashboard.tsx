@@ -176,7 +176,12 @@ const CompanyDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      <SEO
+        title="Company Dashboard — Path4U"
+        description="Post jobs, track applications, manage candidates, and view analytics on Path4U."
+        canonical="https://path4u.lovable.app/company/dashboard"
+        ogUrl="https://path4u.lovable.app/company/dashboard"
+      />
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
