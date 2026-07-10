@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SEO } from "@/components/SEO";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import ResumeUpload from "@/components/ResumeUpload";
@@ -78,6 +79,13 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Path4U — Personalized Career Path & Skill Assessment Assistant"
+        description="AI-powered career platform that scans your resume, evaluates skills through adaptive quizzes, and matches you with relevant tech jobs."
+        canonical="https://path4u.lovable.app/"
+        ogUrl="https://path4u.lovable.app/"
+        ogImage="https://storage.googleapis.com/gpt-engineer-file-uploads/1agec8Z3lWReZMNanG3xSLhThar1/social-images/social-1782887333880-Path4U(Final).webp"
+      />
       <Header />
       
       {appState === "landing" && (
