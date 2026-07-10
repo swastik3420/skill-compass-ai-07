@@ -269,6 +269,11 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
             <CareerRoadmap results={results} parsedResume={parsedResume} />
           </div>
 
+          {/* Row 5.5: Skill Gap Analysis */}
+          <div className="mb-8">
+            <SkillGapAnalysis results={results} parsedResume={parsedResume} />
+          </div>
+
           {/* Row 6: Skills to Learn with Course Links */}
           <div className="mb-8">
             <RecommendedSkills results={results} />
