@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { SEO } from "@/components/SEO";
 import { ArrowLeft, Camera, Loader2, Save, User, Plus, Trash2, FileText, GraduationCap, Award, Upload, ZapOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -279,6 +280,12 @@ const ProfileSettings = () => {
 
   return (
     <div className="min-h-screen bg-background py-12 px-4">
+      <SEO
+        title="Profile Settings — Path4U"
+        description="Manage your Path4U profile, education, certifications, and account preferences."
+        canonical="https://path4u.lovable.app/settings"
+        ogUrl="https://path4u.lovable.app/settings"
+      />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

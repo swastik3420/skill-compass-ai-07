@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { SEO } from "@/components/SEO";
 import { Mail, Lock, Building2, ArrowRight, Loader2, Eye, EyeOff, Globe, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,6 +136,12 @@ const CompanyAuth = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <SEO
+        title="Company Sign In — Path4U"
+        description="Sign in to your Path4U company account to post jobs and manage candidates."
+        canonical="https://path4u.lovable.app/company/auth"
+        ogUrl="https://path4u.lovable.app/company/auth"
+      />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
