@@ -11,6 +11,7 @@ import SkillFingerprint from "@/components/SkillFingerprint";
 import JobRoleProbability from "@/components/JobRoleProbability";
 import AIJobSearch from "@/components/AIJobSearch";
 import CareerRoadmap from "@/components/CareerRoadmap";
+import SkillGapAnalysis from "@/components/SkillGapAnalysis";
 import RecommendedSkills from "@/components/RecommendedSkills";
 
 interface SkillResult {
