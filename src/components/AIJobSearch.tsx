@@ -131,9 +131,11 @@ const AIJobSearch = ({ results, parsedResume }: AIJobSearchProps) => {
       });
       if (error) throw error;
       if (data?.jobs) setJobs(data.jobs);
+      if (Array.isArray(data?.externalSearchLinks)) setExternalLinks(data.externalSearchLinks);
     } catch (err) {
       console.error('Error searching jobs:', err);
       setJobs([]);
+      setExternalLinks([]);
     } finally {
       setIsLoading(false);
     }
