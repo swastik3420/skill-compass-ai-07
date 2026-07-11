@@ -429,13 +429,38 @@ serve(async (req) => {
         .map(({ postedMs, ...rest }) => rest);
     }
 
+    // Also always attempt RemoteOK enrichment (free, public API) so remote-first
+    // users see openings from that board in addition to JSearch aggregators.
+    try {
+      const now = Date.now();
+      const remoteOk = await fetchRemoteOk(userSkills);
+      const existing = new Set(liveJobs.map(j => `${j.title?.toLowerCase().trim()}|${j.company?.toLowerCase().trim()}`));
+      const extra = remoteOk
+        .filter(j => j.url && j.title && j.company)
+        .filter(j => !j.postedMs || (now - j.postedMs) <= MS_14_DAYS)
+        .filter(j => !existing.has(`${j.title.toLowerCase().trim()}|${j.company.toLowerCase().trim()}`))
+        .sort((a, b) => b.match - a.match)
+        .slice(0, 10)
+        .map(({ postedMs, ...rest }) => rest);
+      liveJobs = [...liveJobs, ...extra];
+    } catch (e) {
+      console.warn('RemoteOK enrichment failed:', e);
+    }
+
+    // Build browse-on-external-boards links for the top predicted roles so
+    // users can jump to Indeed, LinkedIn, Glassdoor, Wellfound, RemoteOK, WWR, Naukri.
+    const rolesForLinks = boundedPredictedRoles.length
+      ? boundedPredictedRoles.slice(0, 5)
+      : (boundedJobTitles as string[]).slice(0, 3).map((r) => ({ role: r, probability: 50 }));
+    const externalSearchLinks = buildExternalSearchLinks(rolesForLinks);
+
     const allJobs = [
       ...companyJobs.sort((a: any, b: any) => b.match - a.match),
       ...liveJobs,
     ];
 
     return new Response(
-      JSON.stringify({ jobs: allJobs, liveCount: liveJobs.length, companyCount: companyJobs.length }),
+      JSON.stringify({ jobs: allJobs, liveCount: liveJobs.length, companyCount: companyJobs.length, externalSearchLinks }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
