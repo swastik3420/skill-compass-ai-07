@@ -41,10 +41,17 @@ interface AIJobSearchProps {
   parsedResume?: ParsedResume | null;
 }
 
+interface ExternalRoleLinks {
+  role: string;
+  probability: number;
+  links: { source: string; url: string }[];
+}
+
 const AIJobSearch = ({ results, parsedResume }: AIJobSearchProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [jobs, setJobs] = useState<JobListing[]>([]);
+  const [externalLinks, setExternalLinks] = useState<ExternalRoleLinks[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
