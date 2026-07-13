@@ -60,10 +60,23 @@ function uniqueTerms(values: unknown[], limit = 6): string[] {
 
 function scoreTextMatch(text: string, userSkills: string[]): number {
   const hay = text.toLowerCase();
-  if (!userSkills.length) return 60;
+  if (!userSkills.length) return 55;
   const hits = userSkills.filter((s: string) => s && hay.includes(s)).length;
-  return Math.min(98, 55 + Math.round((hits / userSkills.length) * 45));
+  return Math.min(98, 45 + Math.round((hits / userSkills.length) * 50));
 }
+
+// Return true if text contains any of the role title tokens (>3 chars).
+function textMatchesAnyRole(text: string, roleTitles: string[]): boolean {
+  if (!roleTitles.length) return true;
+  const hay = text.toLowerCase();
+  return roleTitles.some(r => {
+    const tokens = r.toLowerCase().split(/[^a-z0-9+#.]+/).filter(t => t.length > 3);
+    if (!tokens.length) return hay.includes(r.toLowerCase());
+    // require at least one meaningful token overlap
+    return tokens.some(t => hay.includes(t));
+  });
+}
+
 
 function recentIsoFromSeconds(seconds?: number | null): string {
   return seconds ? new Date(seconds * 1000).toISOString() : 'Recent';
@@ -79,7 +92,7 @@ async function fetchRemoteOk(userSkills: string[]): Promise<any[]> {
   const jobs: any[] = [];
   try {
     const data = await fetchJson('https://remoteok.com/api');
-    const rows = Array.isArray(data) ? data.slice(1) : []; // first item is legal notice
+    const rows = Array.isArray(data) ? data.slice(1) : [];
     for (const j of rows) {
       const url = j.url || j.apply_url || '';
       if (!url) continue;
@@ -105,25 +118,38 @@ async function fetchRemoteOk(userSkills: string[]): Promise<any[]> {
   return jobs;
 }
 
-async function fetchFallbackLiveJobs(queryTerms: string[], userSkills: string[]): Promise<any[]> {
-  const queries = queryTerms.length ? queryTerms : ['Data Analyst', 'Software Engineer'];
+// Role-aware fallback: runs a search per predicted role across multiple free
+// job APIs (Remotive, Arbeitnow, Jobicy, Himalayas, WeWorkRemotely RSS,
+// RemoteOK) and tags each result with the role it was fetched for + a weight
+// derived from that role's probability. Only jobs whose title/description
+// actually mention the role tokens are kept.
+async function fetchFallbackLiveJobs(
+  roleQueries: { query: string; weight: number }[],
+  userSkills: string[],
+): Promise<any[]> {
+  const queries = roleQueries.length
+    ? roleQueries
+    : [{ query: 'Software Engineer', weight: 40 }];
   const jobs: any[] = [];
+  const roleTitles = queries.map(q => q.query);
 
-  for (const query of queries.slice(0, 3)) {
+  for (const { query, weight } of queries.slice(0, 5)) {
     const encoded = encodeURIComponent(query);
 
+    // Remotive
     try {
-      const remotive = await fetchJson(`https://remotive.com/api/remote-jobs?search=${encoded}&limit=20`);
+      const remotive = await fetchJson(`https://remotive.com/api/remote-jobs?search=${encoded}&limit=15`);
       const rows = Array.isArray(remotive?.jobs) ? remotive.jobs : [];
       for (const j of rows) {
-        const url = j.url || '';
         jobs.push({
           title: j.title,
           company: j.company_name || 'Unknown',
           location: j.candidate_required_location || 'Remote',
           type: j.job_type || 'Full-time',
-          match: scoreTextMatch(`${j.title || ''} ${j.description || ''} ${(j.tags || []).join(' ')}`, userSkills),
-          url,
+          _base: scoreTextMatch(`${j.title || ''} ${j.description || ''} ${(j.tags || []).join(' ')}`, userSkills),
+          _weight: weight,
+          _forRole: query,
+          url: j.url || '',
           source: 'Remotive',
           postedDate: j.publication_date || 'Recent',
           postedMs: j.publication_date ? Date.parse(j.publication_date) : null,
@@ -132,23 +158,23 @@ async function fetchFallbackLiveJobs(queryTerms: string[], userSkills: string[])
           skillsRequired: Array.isArray(j.tags) ? j.tags.slice(0, 8) : [],
         });
       }
-    } catch (e) {
-      console.warn(`Remotive fallback failed for "${query}":`, e);
-    }
+    } catch (e) { console.warn(`Remotive "${query}":`, e); }
 
+    // Arbeitnow
     try {
       const arbeitnow = await fetchJson(`https://www.arbeitnow.com/api/job-board-api?search=${encoded}`);
       const rows = Array.isArray(arbeitnow?.data) ? arbeitnow.data : [];
-      for (const j of rows.slice(0, 20)) {
-        const url = j.url || '';
+      for (const j of rows.slice(0, 15)) {
         const createdAt = typeof j.created_at === 'number' ? j.created_at : null;
         jobs.push({
           title: j.title,
           company: j.company_name || 'Unknown',
           location: j.location || (j.remote ? 'Remote' : 'Not specified'),
           type: Array.isArray(j.job_types) && j.job_types.length ? j.job_types.join(', ') : 'Full-time',
-          match: scoreTextMatch(`${j.title || ''} ${j.description || ''} ${(j.tags || []).join(' ')}`, userSkills),
-          url,
+          _base: scoreTextMatch(`${j.title || ''} ${j.description || ''} ${(j.tags || []).join(' ')}`, userSkills),
+          _weight: weight,
+          _forRole: query,
+          url: j.url || '',
           source: 'Arbeitnow',
           postedDate: recentIsoFromSeconds(createdAt),
           postedMs: createdAt ? createdAt * 1000 : null,
@@ -157,16 +183,77 @@ async function fetchFallbackLiveJobs(queryTerms: string[], userSkills: string[])
           skillsRequired: Array.isArray(j.tags) ? j.tags.slice(0, 8) : [],
         });
       }
-    } catch (e) {
-      console.warn(`Arbeitnow fallback failed for "${query}":`, e);
-    }
+    } catch (e) { console.warn(`Arbeitnow "${query}":`, e); }
+
+    // Jobicy
+    try {
+      const jobicy = await fetchJson(`https://jobicy.com/api/v2/remote-jobs?count=15&tag=${encoded}`);
+      const rows = Array.isArray(jobicy?.jobs) ? jobicy.jobs : [];
+      for (const j of rows) {
+        const postedMs = j.pubDate ? Date.parse(j.pubDate) : null;
+        jobs.push({
+          title: j.jobTitle,
+          company: j.companyName || 'Unknown',
+          location: j.jobGeo || 'Remote',
+          type: Array.isArray(j.jobType) && j.jobType.length ? j.jobType.join(', ') : 'Full-time',
+          _base: scoreTextMatch(`${j.jobTitle || ''} ${j.jobExcerpt || ''} ${j.jobDescription || ''}`, userSkills),
+          _weight: weight,
+          _forRole: query,
+          url: j.url || '',
+          source: 'Jobicy',
+          postedDate: j.pubDate || 'Recent',
+          postedMs,
+          workMode: 'Remote',
+          isCompanyJob: false,
+          skillsRequired: Array.isArray(j.jobIndustry) ? j.jobIndustry.slice(0, 8) : [],
+        });
+      }
+    } catch (e) { console.warn(`Jobicy "${query}":`, e); }
+
+    // Himalayas
+    try {
+      const hima = await fetchJson(`https://himalayas.app/jobs/api?limit=15&search=${encoded}`);
+      const rows = Array.isArray(hima?.jobs) ? hima.jobs : [];
+      for (const j of rows) {
+        const postedMs = j.pubDate ? Date.parse(j.pubDate) : (j.publishedDate ? Date.parse(j.publishedDate) : null);
+        jobs.push({
+          title: j.title,
+          company: j.companyName || j.company?.name || 'Unknown',
+          location: Array.isArray(j.locationRestrictions) && j.locationRestrictions.length ? j.locationRestrictions.join(', ') : 'Remote',
+          type: Array.isArray(j.employmentType) && j.employmentType.length ? j.employmentType.join(', ') : 'Full-time',
+          _base: scoreTextMatch(`${j.title || ''} ${j.excerpt || ''} ${(j.categories || []).join(' ')}`, userSkills),
+          _weight: weight,
+          _forRole: query,
+          url: j.applicationLink || j.jobUrl || '',
+          source: 'Himalayas',
+          postedDate: j.pubDate || j.publishedDate || 'Recent',
+          postedMs,
+          workMode: 'Remote',
+          isCompanyJob: false,
+          skillsRequired: Array.isArray(j.categories) ? j.categories.slice(0, 8) : [],
+        });
+      }
+    } catch (e) { console.warn(`Himalayas "${query}":`, e); }
   }
 
-  // RemoteOK once (returns broad set, filter by skill match below)
-  jobs.push(...(await fetchRemoteOk(userSkills)));
+  // RemoteOK once — tag each row against the best matching role
+  try {
+    const rok = await fetchRemoteOk(userSkills);
+    for (const j of rok) {
+      const best = queries.reduce((acc, q) => {
+        const t = q.query.toLowerCase();
+        const hits = (j.title || '').toLowerCase().includes(t) ? q.weight : 0;
+        return hits > acc.weight ? { query: q.query, weight: q.weight } : acc;
+      }, { query: queries[0]?.query || '', weight: 30 });
+      jobs.push({ ...j, _base: j.match, _weight: best.weight, _forRole: best.query });
+    }
+  } catch (e) { console.warn('RemoteOK:', e); }
 
-  return jobs;
+  // Filter out results that don't mention any predicted role token → these are
+  // the "random unrelated jobs" the user was seeing.
+  return jobs.filter(j => textMatchesAnyRole(`${j.title || ''}`, roleTitles));
 }
+
 
 // Build deep-link searches on external boards for a given role. These are
 // guaranteed-live search URLs that let users browse Indeed/LinkedIn/Glassdoor/
@@ -401,19 +488,32 @@ serve(async (req) => {
         .slice()
         .sort((a: any, b: any) => (b.score || 0) - (a.score || 0))
         .map((s: any) => s.name || s.skill);
-      const fallbackQueries = uniqueTerms([
-        ...boundedPredictedRoles.map((r: any) => r.role),
-        ...boundedJobTitles,
-        topSkills.slice(0, 2).join(' '),
-        topSkills[0],
-      ], 8);
+
+      // Build weighted role queries (probability drives ranking).
+      const fbQueries: { query: string; weight: number }[] = [];
+      const seenQ = new Set<string>();
+      const addQ = (q: string, weight: number) => {
+        const key = (q || '').trim().toLowerCase();
+        if (!key || seenQ.has(key)) return;
+        seenQ.add(key);
+        fbQueries.push({ query: q, weight });
+      };
+      for (const r of boundedPredictedRoles) if (r.probability >= 15) addQ(r.role, r.probability);
+      for (const t of boundedJobTitles) addQ(t as string, 45);
+      if (!fbQueries.length) addQ(topSkills[0] || 'Software Engineer', 40);
 
       const now = Date.now();
-      const fallbackRaw = await fetchFallbackLiveJobs(fallbackQueries, userSkills);
+      const fallbackRaw = await fetchFallbackLiveJobs(fbQueries.slice(0, 5), userSkills);
       const fallbackNormalized = fallbackRaw
         .filter(j => j.url && j.title && j.company)
         .filter(j => !j.postedMs || (now - j.postedMs) <= MS_14_DAYS)
-        .filter(j => !isBlockedDomain(j.url));
+        .filter(j => !isBlockedDomain(j.url))
+        .map(j => ({
+          ...j,
+          // Blend text/skill match with role probability so higher-probability
+          // roles surface first.
+          match: Math.min(99, Math.round((j._base ?? 55) * 0.6 + (j._weight ?? 40) * 0.4)),
+        }));
 
       const seen = new Set<string>();
       const deduped = fallbackNormalized.filter(j => {
@@ -426,26 +526,13 @@ serve(async (req) => {
       const aliveFlags = await Promise.all(candidates.map(j => isLinkAlive(j.url)));
       liveJobs = candidates
         .filter((_, i) => aliveFlags[i])
-        .map(({ postedMs, ...rest }) => rest);
+        .map(({ postedMs, _base, _weight, _forRole, ...rest }) => rest);
     }
 
-    // Also always attempt RemoteOK enrichment (free, public API) so remote-first
-    // users see openings from that board in addition to JSearch aggregators.
-    try {
-      const now = Date.now();
-      const remoteOk = await fetchRemoteOk(userSkills);
-      const existing = new Set(liveJobs.map(j => `${j.title?.toLowerCase().trim()}|${j.company?.toLowerCase().trim()}`));
-      const extra = remoteOk
-        .filter(j => j.url && j.title && j.company)
-        .filter(j => !j.postedMs || (now - j.postedMs) <= MS_14_DAYS)
-        .filter(j => !existing.has(`${j.title.toLowerCase().trim()}|${j.company.toLowerCase().trim()}`))
-        .sort((a, b) => b.match - a.match)
-        .slice(0, 10)
-        .map(({ postedMs, ...rest }) => rest);
-      liveJobs = [...liveJobs, ...extra];
-    } catch (e) {
-      console.warn('RemoteOK enrichment failed:', e);
-    }
+    // Final ordering: rank by match desc so the "Probability of Job Role"
+    // signal drives which cards the user sees first.
+    liveJobs = liveJobs.sort((a: any, b: any) => (b.match || 0) - (a.match || 0));
+
 
     // Build browse-on-external-boards links for the top predicted roles so
     // users can jump to Indeed, LinkedIn, Glassdoor, Wellfound, RemoteOK, WWR, Naukri.
