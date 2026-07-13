@@ -281,6 +281,12 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
             <SalaryInsights results={results} parsedResume={parsedResume} />
           </div>
 
+          {/* Row 5.7: Best Time to Switch */}
+          <div className="mb-8">
+            <BestTimeToSwitch results={results} parsedResume={parsedResume} />
+          </div>
+
+
           {/* Row 6: Skills to Learn with Course Links */}
           <div className="mb-8">
             <RecommendedSkills results={results} />
