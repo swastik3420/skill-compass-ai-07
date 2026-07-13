@@ -156,9 +156,10 @@ Return ONLY a valid JSON array (no markdown, no extra text):
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate the assessment questions now for the skills listed above.` }
+          { role: 'user', content: `Generate the assessment questions now for the skills listed above. Return ONLY a valid JSON array, no prose.` }
         ],
         temperature: 0.6,
+        max_tokens: 16000,
       }),
     });
 
@@ -231,8 +232,34 @@ Return ONLY a valid JSON array (no markdown, no extra text):
         jsonStr = jsonStr.substring(startIdx, endIdx + 1);
       }
       
-      questions = JSON.parse(jsonStr);
-      
+      try {
+        questions = JSON.parse(jsonStr);
+      } catch (_e) {
+        // Fallback: extract individual complete objects by brace matching
+        console.warn('Array parse failed, extracting objects individually');
+        const objs: any[] = [];
+        let d = 0, objStart = -1, inStr = false, esc = false;
+        for (let i = 0; i < jsonStr.length; i++) {
+          const c = jsonStr[i];
+          if (inStr) {
+            if (esc) esc = false;
+            else if (c === '\\') esc = true;
+            else if (c === '"') inStr = false;
+            continue;
+          }
+          if (c === '"') { inStr = true; continue; }
+          if (c === '{') { if (d === 0) objStart = i; d++; }
+          else if (c === '}') {
+            d--;
+            if (d === 0 && objStart !== -1) {
+              try { objs.push(JSON.parse(jsonStr.substring(objStart, i + 1))); } catch (_) {}
+              objStart = -1;
+            }
+          }
+        }
+        questions = objs;
+      }
+
       if (!Array.isArray(questions)) {
         throw new Error('Response is not an array');
       }
