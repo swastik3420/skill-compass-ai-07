@@ -160,7 +160,6 @@ Return ONLY a valid JSON array (no markdown, no extra text):
         ],
         temperature: 0.6,
         max_tokens: 16000,
-        response_format: { type: 'json_object' },
       }),
     });
 
