@@ -13,6 +13,7 @@ import AIJobSearch from "@/components/AIJobSearch";
 import CareerRoadmap from "@/components/CareerRoadmap";
 import SkillGapAnalysis from "@/components/SkillGapAnalysis";
 import SalaryInsights from "@/components/SalaryInsights";
+import BestTimeToSwitch from "@/components/BestTimeToSwitch";
 import RecommendedSkills from "@/components/RecommendedSkills";
 
 interface SkillResult {
