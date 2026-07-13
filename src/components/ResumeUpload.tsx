@@ -162,10 +162,10 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
             onDragOver={handleDrag}
             onDrop={handleDrop}
             className={`
-              relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300
-              ${isDragging 
-                ? "border-secondary bg-secondary/10" 
-                : file 
+              relative border-2 rounded-none p-12 text-center transition-all duration-300
+              ${isDragging
+                ? "border-secondary bg-secondary/10"
+                : file
                   ? error ? "border-destructive bg-destructive/5" : "border-success bg-success/5"
                   : "border-border hover:border-secondary/50 bg-card"
               }
@@ -179,7 +179,7 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <div className="w-16 h-16 gradient-primary rounded-none flex items-center justify-center mx-auto mb-6">
                     <Upload className="w-8 h-8 text-primary-foreground" />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">
