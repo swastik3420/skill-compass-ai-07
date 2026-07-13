@@ -156,9 +156,11 @@ Return ONLY a valid JSON array (no markdown, no extra text):
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate the assessment questions now for the skills listed above.` }
+          { role: 'user', content: `Generate the assessment questions now for the skills listed above. Return ONLY a valid JSON array, no prose.` }
         ],
         temperature: 0.6,
+        max_tokens: 16000,
+        response_format: { type: 'json_object' },
       }),
     });
 
