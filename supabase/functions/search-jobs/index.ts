@@ -488,19 +488,32 @@ serve(async (req) => {
         .slice()
         .sort((a: any, b: any) => (b.score || 0) - (a.score || 0))
         .map((s: any) => s.name || s.skill);
-      const fallbackQueries = uniqueTerms([
-        ...boundedPredictedRoles.map((r: any) => r.role),
-        ...boundedJobTitles,
-        topSkills.slice(0, 2).join(' '),
-        topSkills[0],
-      ], 8);
+
+      // Build weighted role queries (probability drives ranking).
+      const fbQueries: { query: string; weight: number }[] = [];
+      const seenQ = new Set<string>();
+      const addQ = (q: string, weight: number) => {
+        const key = (q || '').trim().toLowerCase();
+        if (!key || seenQ.has(key)) return;
+        seenQ.add(key);
+        fbQueries.push({ query: q, weight });
+      };
+      for (const r of boundedPredictedRoles) if (r.probability >= 15) addQ(r.role, r.probability);
+      for (const t of boundedJobTitles) addQ(t as string, 45);
+      if (!fbQueries.length) addQ(topSkills[0] || 'Software Engineer', 40);
 
       const now = Date.now();
-      const fallbackRaw = await fetchFallbackLiveJobs(fallbackQueries, userSkills);
+      const fallbackRaw = await fetchFallbackLiveJobs(fbQueries.slice(0, 5), userSkills);
       const fallbackNormalized = fallbackRaw
         .filter(j => j.url && j.title && j.company)
         .filter(j => !j.postedMs || (now - j.postedMs) <= MS_14_DAYS)
-        .filter(j => !isBlockedDomain(j.url));
+        .filter(j => !isBlockedDomain(j.url))
+        .map(j => ({
+          ...j,
+          // Blend text/skill match with role probability so higher-probability
+          // roles surface first.
+          match: Math.min(99, Math.round((j._base ?? 55) * 0.6 + (j._weight ?? 40) * 0.4)),
+        }));
 
       const seen = new Set<string>();
       const deduped = fallbackNormalized.filter(j => {
@@ -513,26 +526,13 @@ serve(async (req) => {
       const aliveFlags = await Promise.all(candidates.map(j => isLinkAlive(j.url)));
       liveJobs = candidates
         .filter((_, i) => aliveFlags[i])
-        .map(({ postedMs, ...rest }) => rest);
+        .map(({ postedMs, _base, _weight, _forRole, ...rest }) => rest);
     }
 
-    // Also always attempt RemoteOK enrichment (free, public API) so remote-first
-    // users see openings from that board in addition to JSearch aggregators.
-    try {
-      const now = Date.now();
-      const remoteOk = await fetchRemoteOk(userSkills);
-      const existing = new Set(liveJobs.map(j => `${j.title?.toLowerCase().trim()}|${j.company?.toLowerCase().trim()}`));
-      const extra = remoteOk
-        .filter(j => j.url && j.title && j.company)
-        .filter(j => !j.postedMs || (now - j.postedMs) <= MS_14_DAYS)
-        .filter(j => !existing.has(`${j.title.toLowerCase().trim()}|${j.company.toLowerCase().trim()}`))
-        .sort((a, b) => b.match - a.match)
-        .slice(0, 10)
-        .map(({ postedMs, ...rest }) => rest);
-      liveJobs = [...liveJobs, ...extra];
-    } catch (e) {
-      console.warn('RemoteOK enrichment failed:', e);
-    }
+    // Final ordering: rank by match desc so the "Probability of Job Role"
+    // signal drives which cards the user sees first.
+    liveJobs = liveJobs.sort((a: any, b: any) => (b.match || 0) - (a.match || 0));
+
 
     // Build browse-on-external-boards links for the top predicted roles so
     // users can jump to Indeed, LinkedIn, Glassdoor, Wellfound, RemoteOK, WWR, Naukri.
