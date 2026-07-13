@@ -206,6 +206,39 @@ function buildBoardSearchCards(
   return cards;
 }
 
+function ensurePreferredBoardCoverage(
+  jobs: any[],
+  roles: { role: string; probability: number }[],
+  userSkills: string[],
+): any[] {
+  const rankedRoles = roles.length ? roles : [{ role: 'Software Engineer', probability: 45 }];
+  const topRole = rankedRoles[0];
+  const skillsRequired = Array.from(new Set(userSkills.flatMap(s => comparableTokens(s)))).slice(0, 5);
+  const covered = new Set(jobs.map(j => normalizeSource(j.source, j.url)));
+  const additions = PREFERRED_JOB_BOARDS
+    .filter(source => !covered.has(source))
+    .map(source => ({
+      title: `${topRole.role} jobs`,
+      company: `${source} live listings`,
+      location: source === 'Naukri' ? 'India / Remote' : 'Worldwide / Remote',
+      type: 'Live job board search',
+      match: Math.min(98, Math.max(50, Math.round(topRole.probability))),
+      url: boardSearchUrl(source, topRole.role),
+      source,
+      postedDate: 'Live search',
+      workMode: 'Remote / On-site',
+      isCompanyJob: false,
+      skillsRequired,
+    }));
+
+  const deduped = new Map<string, any>();
+  for (const job of [...additions, ...jobs]) {
+    const key = `${String(job.title || '').toLowerCase().trim()}|${String(job.company || '').toLowerCase().trim()}`;
+    if (!deduped.has(key)) deduped.set(key, job);
+  }
+  return Array.from(deduped.values());
+}
+
 
 function recentIsoFromSeconds(seconds?: number | null): string {
   return seconds ? new Date(seconds * 1000).toISOString() : 'Recent';
@@ -672,6 +705,8 @@ serve(async (req) => {
       ? boundedPredictedRoles.slice(0, 5)
       : (boundedJobTitles as string[]).slice(0, 3).map((r) => ({ role: r, probability: 50 }));
     const externalSearchLinks = buildExternalSearchLinks(rolesForLinks);
+
+    liveJobs = ensurePreferredBoardCoverage(liveJobs, rolesForLinks, userSkills);
 
     // Guarantee 10 visible role-ranked cards. Some requested boards do not
     // expose scrape-safe public listing APIs, so we fill any shortfall with
