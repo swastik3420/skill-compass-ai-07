@@ -179,8 +179,10 @@ function buildBoardSearchCards(
   const rankedRoles = roles.length ? roles : [{ role: 'Software Engineer', probability: 45 }];
   const skillsRequired = Array.from(new Set(userSkills.flatMap(s => comparableTokens(s)))).slice(0, 5);
 
-  for (const role of rankedRoles.slice(0, 5)) {
-    for (const source of PREFERRED_JOB_BOARDS) {
+  // Interleave source-then-role so cards represent the whole probability
+  // spectrum, not just the top role.
+  for (const source of PREFERRED_JOB_BOARDS) {
+    for (const role of rankedRoles.slice(0, 6)) {
       const title = `${role.role} jobs`;
       const company = `${source} live listings`;
       const key = `${title.toLowerCase()}|${company.toLowerCase()}`;
@@ -198,6 +200,7 @@ function buildBoardSearchCards(
         workMode: 'Remote / On-site',
         isCompanyJob: false,
         skillsRequired,
+        _forRole: role.role,
       });
       if (cards.length >= limit) return cards;
     }
@@ -212,24 +215,28 @@ function ensurePreferredBoardCoverage(
   userSkills: string[],
 ): any[] {
   const rankedRoles = roles.length ? roles : [{ role: 'Software Engineer', probability: 45 }];
-  const topRole = rankedRoles[0];
   const skillsRequired = Array.from(new Set(userSkills.flatMap(s => comparableTokens(s)))).slice(0, 5);
   const covered = new Set(jobs.map(j => normalizeSource(j.source, j.url)));
   const additions = PREFERRED_JOB_BOARDS
     .filter(source => !covered.has(source))
-    .map(source => ({
-      title: `${topRole.role} jobs`,
-      company: `${source} live listings`,
-      location: source === 'Naukri' ? 'India / Remote' : 'Worldwide / Remote',
-      type: 'Live job board search',
-      match: Math.min(98, Math.max(50, Math.round(topRole.probability))),
-      url: boardSearchUrl(source, topRole.role),
-      source,
-      postedDate: 'Live search',
-      workMode: 'Remote / On-site',
-      isCompanyJob: false,
-      skillsRequired,
-    }));
+    .map((source, i) => {
+      // Rotate roles across uncovered boards so we don't spam the top role.
+      const role = rankedRoles[i % rankedRoles.length];
+      return {
+        title: `${role.role} jobs`,
+        company: `${source} live listings`,
+        location: source === 'Naukri' ? 'India / Remote' : 'Worldwide / Remote',
+        type: 'Live job board search',
+        match: Math.min(98, Math.max(50, Math.round(role.probability))),
+        url: boardSearchUrl(source, role.role),
+        source,
+        postedDate: 'Live search',
+        workMode: 'Remote / On-site',
+        isCompanyJob: false,
+        skillsRequired,
+        _forRole: role.role,
+      };
+    });
 
   const deduped = new Map<string, any>();
   for (const job of [...additions, ...jobs]) {
@@ -644,11 +651,11 @@ serve(async (req) => {
       });
 
       // Keep more candidates now that we search across many roles.
-      const candidates = deduped.sort((a, b) => b.match - a.match).slice(0, 30);
+      const candidates = deduped.sort((a, b) => b.match - a.match).slice(0, 40);
       const aliveFlags = await Promise.all(candidates.map(j => isLinkAlive(j.url)));
       liveJobs = candidates
         .filter((_, i) => aliveFlags[i])
-        .map(({ postedMs, _forRole, ...rest }) => rest);
+        .map(({ postedMs, ...rest }) => rest);
     } else {
       console.warn('RAPIDAPI_JSEARCH_KEY not configured — skipping live job fetch');
     }
@@ -692,11 +699,11 @@ serve(async (req) => {
         seen.add(key);
         return true;
       });
-      const candidates = deduped.sort((a, b) => b.match - a.match).slice(0, 30);
+      const candidates = deduped.sort((a, b) => b.match - a.match).slice(0, 40);
       const aliveFlags = await Promise.all(candidates.map(j => isLinkAlive(j.url)));
       liveJobs = candidates
         .filter((_, i) => aliveFlags[i])
-        .map(({ postedMs, _base, _weight, _forRole, ...rest }) => rest);
+        .map(({ postedMs, _base, _weight, ...rest }) => rest);
     }
 
     // Build browse-on-external-boards links for the top predicted roles so
@@ -718,9 +725,32 @@ serve(async (req) => {
       ];
     }
 
-    // Final ordering: rank by match desc so the "Probability of Job Role"
-    // signal drives which cards the user sees first.
-    liveJobs = liveJobs.sort((a: any, b: any) => (b.match || 0) - (a.match || 0)).slice(0, 10);
+    // Diversify: round-robin across predicted roles so the final 10 include
+    // jobs for the WHOLE probability spectrum (not only the top role). Within
+    // each role bucket, keep highest-match first.
+    const roleOrder = rolesForLinks.map(r => r.role);
+    const buckets = new Map<string, any[]>();
+    for (const r of roleOrder) buckets.set(r, []);
+    buckets.set('__other__', []);
+    for (const j of liveJobs.sort((a: any, b: any) => (b.match || 0) - (a.match || 0))) {
+      const key = roleOrder.includes(j._forRole) ? j._forRole : '__other__';
+      buckets.get(key)!.push(j);
+    }
+    const diversified: any[] = [];
+    const keys = [...roleOrder, '__other__'];
+    let added = true;
+    while (diversified.length < 10 && added) {
+      added = false;
+      for (const k of keys) {
+        const bucket = buckets.get(k)!;
+        if (bucket.length) {
+          diversified.push(bucket.shift());
+          added = true;
+          if (diversified.length >= 10) break;
+        }
+      }
+    }
+    liveJobs = diversified.map(({ _forRole, ...rest }) => rest);
 
     const allJobs = [
       ...companyJobs.sort((a: any, b: any) => b.match - a.match),
