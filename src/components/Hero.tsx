@@ -275,7 +275,7 @@ const Hero = ({ onGetStarted }: HeroProps) => {
               transition={{ duration: 0.8, delay: 1 }}
               className="absolute top-1/2 left-[52%] -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
             >
-              <span className="font-display font-extrabold text-base sm:text-lg md:text-xl lg:text-2xl gradient-text-vivid [text-shadow:0_0_20px_hsl(var(--primary)/0.6)]">
+              <span className="font-display font-extrabold text-base sm:text-lg md:text-xl lg:text-2xl gradient-text-vivid brain-junction-text [text-shadow:0_0_20px_hsl(var(--primary)/0.6)] dark:[text-shadow:0_0_20px_hsl(340_80%_60%/0.6)]">
                 Path4U
               </span>
             </motion.div>
