@@ -15,6 +15,7 @@ import SkillGapAnalysis from "@/components/SkillGapAnalysis";
 import SalaryInsights from "@/components/SalaryInsights";
 import BestTimeToSwitch from "@/components/BestTimeToSwitch";
 import RecommendedSkills from "@/components/RecommendedSkills";
+import DownloadInsightsPDF from "@/components/DownloadInsightsPDF";
 
 interface SkillResult {
   skill: string;
@@ -171,6 +172,7 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
           <div className="grid lg:grid-cols-3 gap-8 mb-8">
             {/* Overall Score Card */}
             <motion.div
+              id="pdf-overall-score"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -206,13 +208,28 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
             </motion.div>
 
             {/* Skill Fingerprint - spans 2 columns */}
-            <div className="lg:col-span-2">
+            <div id="pdf-skill-fingerprint" className="lg:col-span-2">
               <SkillFingerprint results={results} />
             </div>
           </div>
 
+          {/* Download Career Results Insights */}
+          <div className="mb-8">
+            <DownloadInsightsPDF
+              sectionIds={[
+                "pdf-overall-score",
+                "pdf-skill-fingerprint",
+                "pdf-skill-evaluation",
+                "pdf-job-role-probability",
+                "pdf-salary-insights",
+                "pdf-best-time-switch",
+              ]}
+            />
+          </div>
+
           {/* Row 2: Skill Scores */}
           <motion.div
+            id="pdf-skill-evaluation"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -257,7 +274,7 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
           </motion.div>
 
           {/* Row 3: Job Role Probability */}
-          <div className="mb-8">
+          <div id="pdf-job-role-probability" className="mb-8">
             <JobRoleProbability results={results} parsedResume={parsedResume} />
           </div>
 
@@ -277,12 +294,12 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
           </div>
 
           {/* Row 5.6: Salary for Job Roles */}
-          <div className="mb-8">
+          <div id="pdf-salary-insights" className="mb-8">
             <SalaryInsights results={results} parsedResume={parsedResume} />
           </div>
 
           {/* Row 5.7: Best Time to Switch */}
-          <div className="mb-8">
+          <div id="pdf-best-time-switch" className="mb-8">
             <BestTimeToSwitch results={results} parsedResume={parsedResume} />
           </div>
 
