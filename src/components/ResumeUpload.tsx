@@ -252,7 +252,7 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
                       className="mt-6 pt-6 border-t border-border"
                     >
                       <div className="flex flex-wrap gap-2 justify-center">
-                        {parsedData.skills.slice(0, 10).map((skill, i) => (
+                        {(showAllSkills ? parsedData.skills : parsedData.skills.slice(0, 10)).map((skill, i) => (
                           <span
                             key={i}
                             className="px-3 py-1 bg-secondary/15 text-secondary rounded-full text-sm font-medium"
@@ -261,9 +261,13 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
                           </span>
                         ))}
                         {parsedData.skills.length > 10 && (
-                          <span className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm">
-                            +{parsedData.skills.length - 10} more
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowAllSkills((v) => !v)}
+                            className="px-3 py-1 bg-muted text-muted-foreground hover:bg-muted/80 rounded-full text-sm transition-colors"
+                          >
+                            {showAllSkills ? "Show less" : `+${parsedData.skills.length - 10} more`}
+                          </button>
                         )}
                       </div>
                       {parsedData.experienceLevel && (
