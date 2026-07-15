@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Upload, FileText, X, CheckCircle, Loader2 } from "lucide-react";
+import { Upload, FileText, X, CheckCircle, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { parseResume, extractResumeText, type ParsedResume } from "@/lib/api/career";
