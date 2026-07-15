@@ -168,6 +168,20 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
             </motion.div>
           )}
 
+          {/* Download Career Results Insights */}
+          <div className="mb-8">
+            <DownloadInsightsPDF
+              sectionIds={[
+                "pdf-overall-score",
+                "pdf-skill-fingerprint",
+                "pdf-skill-evaluation",
+                "pdf-job-role-probability",
+                "pdf-salary-insights",
+                "pdf-best-time-switch",
+              ]}
+            />
+          </div>
+
           {/* Row 1: Overall Score + Skill Fingerprint */}
           <div className="grid lg:grid-cols-3 gap-8 mb-8">
             {/* Overall Score Card */}
@@ -211,20 +225,6 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
             <div id="pdf-skill-fingerprint" className="lg:col-span-2">
               <SkillFingerprint results={results} />
             </div>
-          </div>
-
-          {/* Download Career Results Insights */}
-          <div className="mb-8">
-            <DownloadInsightsPDF
-              sectionIds={[
-                "pdf-overall-score",
-                "pdf-skill-fingerprint",
-                "pdf-skill-evaluation",
-                "pdf-job-role-probability",
-                "pdf-salary-insights",
-                "pdf-best-time-switch",
-              ]}
-            />
           </div>
 
           {/* Row 2: Skill Scores */}
