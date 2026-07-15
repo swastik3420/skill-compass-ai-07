@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Upload, FileText, X, CheckCircle, Loader2 } from "lucide-react";
+import { Upload, FileText, X, CheckCircle, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { parseResume, extractResumeText, type ParsedResume } from "@/lib/api/career";
@@ -29,6 +29,7 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
   const [error, setError] = useState<string | null>(null);
   const [parsedData, setParsedData] = useState<ParsedResume | null>(null);
   const [showAllSkills, setShowAllSkills] = useState(false);
+  const [excludedSkills, setExcludedSkills] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const isAcceptedFile = (f: File) => {
@@ -113,6 +114,27 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
       });
     }
   };
+
+  const handleStart = (mode: "demo" | "full") => {
+    if (parsedData && excludedSkills.size > 0) {
+      const filtered = {
+        ...parsedData,
+        skills: parsedData.skills.filter((s) => !excludedSkills.has(s.name)),
+      };
+      if (filtered.skills.length === 0) {
+        toast({
+          title: "No skills selected",
+          description: "Please keep at least one skill checked to start the assessment.",
+          variant: "destructive",
+        });
+        return;
+      }
+      onResumeAnalyzed?.(filtered);
+    }
+    onStartAssessment(mode);
+  };
+
+
 
   const removeFile = () => {
     setFile(null);
@@ -252,14 +274,44 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
                       className="mt-6 pt-6 border-t border-border"
                     >
                       <div className="flex flex-wrap gap-2 justify-center">
-                        {(showAllSkills ? parsedData.skills : parsedData.skills.slice(0, 10)).map((skill, i) => (
-                          <span
-                            key={i}
-                            className="px-3 py-1 bg-secondary/15 text-secondary rounded-full text-sm font-medium"
-                          >
-                            {skill.name}
-                          </span>
-                        ))}
+                        {(showAllSkills ? parsedData.skills : parsedData.skills.slice(0, 10)).map((skill, i) => {
+                          const isExcluded = excludedSkills.has(skill.name);
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() =>
+                                setExcludedSkills((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(skill.name)) next.delete(skill.name);
+                                  else next.add(skill.name);
+                                  return next;
+                                })
+                              }
+                              title={isExcluded ? "Click to include in assessment" : "Click to exclude from assessment"}
+                              className={`group inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-all ${
+                                isExcluded
+                                  ? "bg-muted text-muted-foreground line-through opacity-60 hover:opacity-80"
+                                  : "bg-secondary/15 text-secondary hover:bg-secondary/25"
+                              }`}
+                            >
+                              <span
+                                className={`inline-flex items-center justify-center w-4 h-4 rounded-full border ${
+                                  isExcluded
+                                    ? "border-muted-foreground/50"
+                                    : "border-secondary/60 bg-secondary/20"
+                                }`}
+                              >
+                                {isExcluded ? (
+                                  <X className="w-3 h-3" />
+                                ) : (
+                                  <Check className="w-3 h-3" />
+                                )}
+                              </span>
+                              {skill.name}
+                            </button>
+                          );
+                        })}
                         {parsedData.skills.length > 10 && (
                           <button
                             type="button"
@@ -301,15 +353,18 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
               className="mt-6 text-center space-y-3"
             >
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button variant="hero" size="lg" onClick={() => onStartAssessment("full")}>
+                <Button variant="hero" size="lg" onClick={() => handleStart("full")}>
                   Start Full Assessment (30 Q)
                 </Button>
-                <Button variant="outline" size="lg" onClick={() => onStartAssessment("demo")}>
+                <Button variant="outline" size="lg" onClick={() => handleStart("demo")}>
                   Try Demo Mode (5 Q)
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
                 Demo mode is a quick 5-question preview. Full assessment gives accurate skill scoring.
+              </p>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                Note: You can uncheck any skill in the box above for any skill you think are not immediately confident about, and it will not be asked in the questions.
               </p>
             </motion.div>
           )}
