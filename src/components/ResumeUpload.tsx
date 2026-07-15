@@ -253,14 +253,44 @@ const ResumeUpload = ({ onFileUploaded, onStartAssessment, onResumeAnalyzed }: R
                       className="mt-6 pt-6 border-t border-border"
                     >
                       <div className="flex flex-wrap gap-2 justify-center">
-                        {(showAllSkills ? parsedData.skills : parsedData.skills.slice(0, 10)).map((skill, i) => (
-                          <span
-                            key={i}
-                            className="px-3 py-1 bg-secondary/15 text-secondary rounded-full text-sm font-medium"
-                          >
-                            {skill.name}
-                          </span>
-                        ))}
+                        {(showAllSkills ? parsedData.skills : parsedData.skills.slice(0, 10)).map((skill, i) => {
+                          const isExcluded = excludedSkills.has(skill.name);
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() =>
+                                setExcludedSkills((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(skill.name)) next.delete(skill.name);
+                                  else next.add(skill.name);
+                                  return next;
+                                })
+                              }
+                              title={isExcluded ? "Click to include in assessment" : "Click to exclude from assessment"}
+                              className={`group inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-all ${
+                                isExcluded
+                                  ? "bg-muted text-muted-foreground line-through opacity-60 hover:opacity-80"
+                                  : "bg-secondary/15 text-secondary hover:bg-secondary/25"
+                              }`}
+                            >
+                              <span
+                                className={`inline-flex items-center justify-center w-4 h-4 rounded-full border ${
+                                  isExcluded
+                                    ? "border-muted-foreground/50"
+                                    : "border-secondary/60 bg-secondary/20"
+                                }`}
+                              >
+                                {isExcluded ? (
+                                  <X className="w-3 h-3" />
+                                ) : (
+                                  <Check className="w-3 h-3" />
+                                )}
+                              </span>
+                              {skill.name}
+                            </button>
+                          );
+                        })}
                         {parsedData.skills.length > 10 && (
                           <button
                             type="button"
