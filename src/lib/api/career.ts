@@ -104,7 +104,7 @@ export async function extractTextFromPdf(file: File): Promise<string> {
     data,
     useSystemFonts: true,
     disableFontFace: true,
-    isEvalSupported: false,
+    
   }).promise;
 
   const numPages = pdf.numPages;
