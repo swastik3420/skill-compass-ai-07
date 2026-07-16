@@ -96,11 +96,15 @@ export async function generateQuestions(
  */
 export async function extractTextFromPdf(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
+  // Pass a Uint8Array (not a stream) so pdf.js never falls back to async
+  // iteration over a ReadableStream — which is unsupported on mobile Safari.
+  const data = new Uint8Array(arrayBuffer);
 
   const pdf = await pdfjsLib.getDocument({
-    data: arrayBuffer,
+    data,
     useSystemFonts: true,
     disableFontFace: true,
+    isEvalSupported: false,
   }).promise;
 
   const numPages = pdf.numPages;
