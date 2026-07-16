@@ -195,7 +195,7 @@ const Hero = ({ onGetStarted }: HeroProps) => {
               fetchPriority="high"
               decoding="async"
               className="absolute inset-0 w-full h-full object-contain select-none pointer-events-none transition-all duration-700
-                opacity-45 blur-[0.5px] mix-blend-screen saturate-125 contrast-95 [filter:hue-rotate(155deg)_brightness(1.35)_saturate(1.4)]
+                opacity-55 blur-[0.5px] mix-blend-screen saturate-125 contrast-95 [filter:hue-rotate(155deg)_brightness(1.65)_saturate(1.4)]
                 dark:[filter:none] dark:opacity-95 dark:blur-0 dark:mix-blend-screen dark:saturate-125 dark:contrast-100
                 [mask-image:radial-gradient(circle_at_50%_50%,black_45%,rgba(0,0,0,0.45)_55%,rgba(0,0,0,0.12)_62%,transparent_70%)]
                 [-webkit-mask-image:radial-gradient(circle_at_50%_50%,black_45%,rgba(0,0,0,0.45)_55%,rgba(0,0,0,0.12)_62%,transparent_70%)]
