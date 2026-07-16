@@ -177,16 +177,84 @@ const AIJobSearch = ({ results, parsedResume }: AIJobSearchProps) => {
   };
 
   const filteredJobs = useMemo(() => {
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const dateLimitDays: Record<string, number> = {
+      "1": 1, "3": 3, "7": 7, "14": 14, "30": 30,
+    };
+
+    const norm = (s?: string) => (s || "").toLowerCase();
+
+    const matchExperience = (job: JobListing) => {
+      if (experienceLevel === "all") return true;
+      const hay = `${norm(job.experienceLevel)} ${norm(job.title)}`;
+      switch (experienceLevel) {
+        case "intern": return /(intern|trainee)/.test(hay);
+        case "entry": return /(entry|junior|fresher|graduate|associate)/.test(hay);
+        case "mid": return /(mid|intermediate|\bii\b|\b2\b)/.test(hay) || (!/(intern|junior|senior|lead|principal|director)/.test(hay) && norm(job.experienceLevel).includes("mid"));
+        case "senior": return /senior|\bsr\b|\biii\b/.test(hay);
+        case "lead": return /(lead|principal|staff|architect|head|director)/.test(hay);
+      }
+      return true;
+    };
+
+    const matchJobType = (job: JobListing) => {
+      if (jobType === "all") return true;
+      const hay = `${norm(job.type)} ${norm(job.workMode)}`;
+      switch (jobType) {
+        case "full": return hay.includes("full");
+        case "part": return hay.includes("part");
+        case "contract": return /(contract|freelance|temporary)/.test(hay);
+        case "internship": return /(intern|trainee)/.test(hay);
+      }
+      return true;
+    };
+
+    const matchDate = (job: JobListing) => {
+      if (datePosted === "all") return true;
+      if (!job.postedDate) return false;
+      const limit = dateLimitDays[datePosted];
+      const posted = new Date(job.postedDate).getTime();
+      if (isNaN(posted)) {
+        // Try relative strings like "2 days ago"
+        const m = /(\d+)\s*(hour|day|week|month)/i.exec(job.postedDate);
+        if (!m) return false;
+        const n = parseInt(m[1]);
+        const unit = m[2].toLowerCase();
+        const days = unit.startsWith("hour") ? n / 24 : unit.startsWith("day") ? n : unit.startsWith("week") ? n * 7 : n * 30;
+        return days <= limit;
+      }
+      return (now - posted) / dayMs <= limit;
+    };
+
+    const matchCompanyType = (job: JobListing) => {
+      if (companyType === "all") return true;
+      const hay = `${norm(job.company)} ${norm(job.source)}`;
+      switch (companyType) {
+        case "corporate": return /(corp|corporation|ltd|limited|inc\.?|plc)/.test(hay);
+        case "foreign-mnc": return /(google|microsoft|amazon|meta|apple|oracle|ibm|adobe|salesforce|sap|cisco|intel|nvidia|deloitte|accenture|pwc|kpmg|ey|goldman|morgan|jpmorgan|citi|barclays|hsbc|uber|netflix|linkedin|stripe|atlassian|shopify|dell|hp\b|siemens|bosch|samsung|sony|philips)/.test(hay);
+        case "indian-mnc": return /(tcs|tata|infosys|wipro|hcl|tech mahindra|mahindra|reliance|adani|larsen|l&t|mindtree|mphasis|persistent|birla|godrej|zoho|freshworks|paytm|flipkart|ola|swiggy|zomato|byju|razorpay|phonepe|mahindra)/.test(hay);
+        case "startup": return /(startup|start-up|seed|series [a-e]|early stage)/.test(hay);
+      }
+      return true;
+    };
+
+    const matchSalary = (job: JobListing) => {
+      const s = job.salary ?? job.salaryMin ?? job.salaryMax;
+      if (s == null) return true; // don't hide jobs without salary data
+      return s >= salaryRange[0] && s <= salaryRange[1];
+    };
+
     return jobs.filter(job => {
       if (workMode !== "all") {
-        const jobMode = (job.workMode || job.type || "").toLowerCase();
+        const jobMode = norm(job.workMode || job.type);
         if (workMode === "remote" && !jobMode.includes("remote")) return false;
         if (workMode === "onsite" && !jobMode.includes("on-site") && !jobMode.includes("onsite") && !jobMode.includes("office")) return false;
         if (workMode === "wfh" && !jobMode.includes("home") && !jobMode.includes("wfh") && !jobMode.includes("hybrid")) return false;
       }
-      return true;
+      return matchExperience(job) && matchJobType(job) && matchDate(job) && matchCompanyType(job) && matchSalary(job);
     });
-  }, [jobs, salaryRange, workMode, currency]);
+  }, [jobs, salaryRange, workMode, currency, experienceLevel, jobType, datePosted, companyType]);
 
   const formatSalary = (val: number) => {
     if (currency === "INR") {
