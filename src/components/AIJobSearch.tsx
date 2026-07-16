@@ -60,6 +60,10 @@ const AIJobSearch = ({ results, parsedResume }: AIJobSearchProps) => {
   const [currency, setCurrency] = useState<string>("INR");
   const [salaryRange, setSalaryRange] = useState<number[]>([0, 5000000]);
   const [workMode, setWorkMode] = useState<string>("all");
+  const [experienceLevel, setExperienceLevel] = useState<string>("all");
+  const [jobType, setJobType] = useState<string>("all");
+  const [datePosted, setDatePosted] = useState<string>("all");
+  const [companyType, setCompanyType] = useState<string>("all");
 
   const salaryMax = currency === "INR" ? 5000000 : 250000;
   const salaryStep = currency === "INR" ? 100000 : 5000;
