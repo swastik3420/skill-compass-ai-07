@@ -213,7 +213,7 @@ const Hero = ({ onGetStarted }: HeroProps) => {
             />
 
             {/* Edge fade into page background */}
-            <div className="absolute -inset-[15%] pointer-events-none transition-opacity duration-700 opacity-100 dark:opacity-0 bg-[radial-gradient(circle_at_50%_50%,hsl(var(--background)/0)_40%,hsl(var(--background))_100%)]" />
+            <div className="absolute -inset-[25%] pointer-events-none transition-opacity duration-700 opacity-100 dark:opacity-0 bg-[radial-gradient(circle_at_50%_50%,hsl(var(--background)/0)_35%,hsl(var(--background))_100%)]" />
 
             {/* Role chips */}
             {roleChips.map((chip, i) => (
