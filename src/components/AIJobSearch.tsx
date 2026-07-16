@@ -60,6 +60,10 @@ const AIJobSearch = ({ results, parsedResume }: AIJobSearchProps) => {
   const [currency, setCurrency] = useState<string>("INR");
   const [salaryRange, setSalaryRange] = useState<number[]>([0, 5000000]);
   const [workMode, setWorkMode] = useState<string>("all");
+  const [experienceLevel, setExperienceLevel] = useState<string>("all");
+  const [jobType, setJobType] = useState<string>("all");
+  const [datePosted, setDatePosted] = useState<string>("all");
+  const [companyType, setCompanyType] = useState<string>("all");
 
   const salaryMax = currency === "INR" ? 5000000 : 250000;
   const salaryStep = currency === "INR" ? 100000 : 5000;
@@ -173,16 +177,84 @@ const AIJobSearch = ({ results, parsedResume }: AIJobSearchProps) => {
   };
 
   const filteredJobs = useMemo(() => {
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const dateLimitDays: Record<string, number> = {
+      "1": 1, "3": 3, "7": 7, "14": 14, "30": 30,
+    };
+
+    const norm = (s?: string) => (s || "").toLowerCase();
+
+    const matchExperience = (job: JobListing) => {
+      if (experienceLevel === "all") return true;
+      const hay = `${norm(job.experienceLevel)} ${norm(job.title)}`;
+      switch (experienceLevel) {
+        case "intern": return /(intern|trainee)/.test(hay);
+        case "entry": return /(entry|junior|fresher|graduate|associate)/.test(hay);
+        case "mid": return /(mid|intermediate|\bii\b|\b2\b)/.test(hay) || (!/(intern|junior|senior|lead|principal|director)/.test(hay) && norm(job.experienceLevel).includes("mid"));
+        case "senior": return /senior|\bsr\b|\biii\b/.test(hay);
+        case "lead": return /(lead|principal|staff|architect|head|director)/.test(hay);
+      }
+      return true;
+    };
+
+    const matchJobType = (job: JobListing) => {
+      if (jobType === "all") return true;
+      const hay = `${norm(job.type)} ${norm(job.workMode)}`;
+      switch (jobType) {
+        case "full": return hay.includes("full");
+        case "part": return hay.includes("part");
+        case "contract": return /(contract|freelance|temporary)/.test(hay);
+        case "internship": return /(intern|trainee)/.test(hay);
+      }
+      return true;
+    };
+
+    const matchDate = (job: JobListing) => {
+      if (datePosted === "all") return true;
+      if (!job.postedDate) return false;
+      const limit = dateLimitDays[datePosted];
+      const posted = new Date(job.postedDate).getTime();
+      if (isNaN(posted)) {
+        // Try relative strings like "2 days ago"
+        const m = /(\d+)\s*(hour|day|week|month)/i.exec(job.postedDate);
+        if (!m) return false;
+        const n = parseInt(m[1]);
+        const unit = m[2].toLowerCase();
+        const days = unit.startsWith("hour") ? n / 24 : unit.startsWith("day") ? n : unit.startsWith("week") ? n * 7 : n * 30;
+        return days <= limit;
+      }
+      return (now - posted) / dayMs <= limit;
+    };
+
+    const matchCompanyType = (job: JobListing) => {
+      if (companyType === "all") return true;
+      const hay = `${norm(job.company)} ${norm(job.source)}`;
+      switch (companyType) {
+        case "corporate": return /(corp|corporation|ltd|limited|inc\.?|plc)/.test(hay);
+        case "foreign-mnc": return /(google|microsoft|amazon|meta|apple|oracle|ibm|adobe|salesforce|sap|cisco|intel|nvidia|deloitte|accenture|pwc|kpmg|ey|goldman|morgan|jpmorgan|citi|barclays|hsbc|uber|netflix|linkedin|stripe|atlassian|shopify|dell|hp\b|siemens|bosch|samsung|sony|philips)/.test(hay);
+        case "indian-mnc": return /(tcs|tata|infosys|wipro|hcl|tech mahindra|mahindra|reliance|adani|larsen|l&t|mindtree|mphasis|persistent|birla|godrej|zoho|freshworks|paytm|flipkart|ola|swiggy|zomato|byju|razorpay|phonepe|mahindra)/.test(hay);
+        case "startup": return /(startup|start-up|seed|series [a-e]|early stage)/.test(hay);
+      }
+      return true;
+    };
+
+    const matchSalary = (job: JobListing) => {
+      const s = job.salary ?? job.salaryMin ?? job.salaryMax;
+      if (s == null) return true; // don't hide jobs without salary data
+      return s >= salaryRange[0] && s <= salaryRange[1];
+    };
+
     return jobs.filter(job => {
       if (workMode !== "all") {
-        const jobMode = (job.workMode || job.type || "").toLowerCase();
+        const jobMode = norm(job.workMode || job.type);
         if (workMode === "remote" && !jobMode.includes("remote")) return false;
         if (workMode === "onsite" && !jobMode.includes("on-site") && !jobMode.includes("onsite") && !jobMode.includes("office")) return false;
         if (workMode === "wfh" && !jobMode.includes("home") && !jobMode.includes("wfh") && !jobMode.includes("hybrid")) return false;
       }
-      return true;
+      return matchExperience(job) && matchJobType(job) && matchDate(job) && matchCompanyType(job) && matchSalary(job);
     });
-  }, [jobs, salaryRange, workMode, currency]);
+  }, [jobs, salaryRange, workMode, currency, experienceLevel, jobType, datePosted, companyType]);
 
   const formatSalary = (val: number) => {
     if (currency === "INR") {
@@ -259,6 +331,80 @@ const AIJobSearch = ({ results, parsedResume }: AIJobSearchProps) => {
                 </div>
               </div>
             </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Experience Level</label>
+              <Select value={experienceLevel} onValueChange={setExperienceLevel}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Levels</SelectItem>
+                  <SelectItem value="intern">Intern / Trainee</SelectItem>
+                  <SelectItem value="entry">Entry-level</SelectItem>
+                  <SelectItem value="mid">Mid-level</SelectItem>
+                  <SelectItem value="senior">Senior</SelectItem>
+                  <SelectItem value="lead">Lead / Principal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Job Type</label>
+              <Select value={jobType} onValueChange={setJobType}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="full">Full-time</SelectItem>
+                  <SelectItem value="part">Part-time</SelectItem>
+                  <SelectItem value="contract">Contract</SelectItem>
+                  <SelectItem value="internship">Internship</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                <Clock className="w-3 h-3 inline mr-1" />Date Posted
+              </label>
+              <Select value={datePosted} onValueChange={setDatePosted}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Anytime</SelectItem>
+                  <SelectItem value="1">Last 24 hours</SelectItem>
+                  <SelectItem value="3">Last 3 days</SelectItem>
+                  <SelectItem value="7">Last 7 days</SelectItem>
+                  <SelectItem value="14">Last 14 days</SelectItem>
+                  <SelectItem value="30">Last 30 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                <Building2 className="w-3 h-3 inline mr-1" />Company Type
+              </label>
+              <Select value={companyType} onValueChange={setCompanyType}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Companies</SelectItem>
+                  <SelectItem value="corporate">Corporate</SelectItem>
+                  <SelectItem value="foreign-mnc">Foreign MNC</SelectItem>
+                  <SelectItem value="indian-mnc">Indian MNC</SelectItem>
+                  <SelectItem value="startup">Startup</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end pt-2 border-t border-border/40">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setWorkMode("all");
+                setExperienceLevel("all");
+                setJobType("all");
+                setDatePosted("all");
+                setCompanyType("all");
+                setSalaryRange([0, salaryMax]);
+              }}
+            >
+              Reset filters
+            </Button>
           </div>
         </motion.div>
       )}
