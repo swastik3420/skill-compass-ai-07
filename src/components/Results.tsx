@@ -191,7 +191,7 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <div className="bg-card rounded-2xl shadow-lg p-6 text-center h-full">
+              <div className="bg-card rounded-none shadow-lg p-6 text-center h-full">
                 <h4 className="text-muted-foreground mb-4">Overall Score</h4>
                 <div className="relative w-32 h-32 mx-auto mb-4">
                   <svg className="w-full h-full transform -rotate-90">
@@ -235,7 +235,7 @@ const Results = ({ results, onRestart, parsedResume }: ResultsProps) => {
             transition={{ delay: 0.2 }}
             className="mb-8"
           >
-            <div className="bg-card rounded-2xl shadow-lg p-6">
+            <div className="bg-card rounded-none shadow-lg p-6">
               <div className="flex items-center gap-3 mb-6">
                 <TrendingUp className="w-6 h-6 text-secondary" />
                 <h3 className="text-xl font-semibold text-foreground">Skill Evaluation</h3>
