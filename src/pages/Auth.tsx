@@ -161,7 +161,7 @@ const Auth = () => {
                     placeholder="John Doe"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className={`pl-10 ${errors.fullName ? 'border-destructive' : ''}`}
+                    className={`pl-10 rounded-none ${errors.fullName ? 'border-destructive' : ''}`}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -181,7 +181,7 @@ const Auth = () => {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`pl-10 ${errors.email ? 'border-destructive' : ''}`}
+                  className={`pl-10 rounded-none ${errors.email ? 'border-destructive' : ''}`}
                   disabled={isSubmitting}
                 />
               </div>
