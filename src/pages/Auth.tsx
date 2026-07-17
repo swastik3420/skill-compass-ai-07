@@ -260,7 +260,7 @@ const Auth = () => {
             type="button"
             variant="outline"
             size="lg"
-            className="w-full"
+            className="w-full rounded-none"
             disabled={isSubmitting}
             onClick={async () => {
               setIsSubmitting(true);
