@@ -101,7 +101,7 @@ serve(async (req) => {
 
     console.log('Generating questions for', selectedSkills.length, 'skills, level:', experienceLevel);
 
-    const systemPrompt = `You are an expert technical interviewer creating a comprehensive skill assessment. Your questions should accurately measure the candidate's real proficiency level across all their skills.
+    const systemPrompt = `You are an expert technical interviewer creating a comprehensive skill assessment. Your questions must be factually bulletproof.
 
 ## Candidate Profile
 - Experience Level: ${experienceLevel || 'Unknown'}
@@ -115,52 +115,72 @@ Generate exactly ${totalQuestions} questions total:
 - ${intermediateCount} Intermediate difficulty questions
 - ${advancedCount} Advanced difficulty questions
 
-Distribute questions across ALL the skills listed above to maximize coverage. Each skill should have at least 1 question. Spread the remaining questions to cover more aspects of each skill.
+Distribute questions across ALL the skills listed above to maximize coverage. Each skill should have at least 1 question.
 
-Question quality rules:
-- Questions must be practical and test real-world knowledge, not trivia
-- All 4 options must be plausible — no obviously wrong answers
-- Only ONE correct answer per question
-- Explanations should teach something useful
-- Cover different aspects of each skill (don't repeat similar questions)
-- Basic questions test fundamental concepts and syntax
-- Intermediate questions test practical application and common patterns
-- Advanced questions test deep understanding, edge cases, and architectural decisions
+## ABSOLUTE ACCURACY RULES (non-negotiable)
+- If you are NOT 100% certain of the absolute technical accuracy of an answer according to official developer documentation, DO NOT generate that question. Skip it and move to another concept. Do not assume, extrapolate, or create ambiguous options.
+- Every question must have EXACTLY ONE unambiguously correct answer verifiable against official docs (MDN, official language/framework docs, RFCs, etc.).
+- Avoid questions about behavior that changes across versions unless you specify the version.
+- Avoid trick questions, opinion-based questions, or "best practice" questions where multiple answers could be defended.
+- All 4 options must be plausible and mutually exclusive — no obviously wrong or joke answers.
+- The 'correctAnswer' is a ZERO-BASED INDEX (0..3) pointing into 'options'. Double-check the index matches the option text you believe is correct.
+- Before finalizing each question, mentally verify: "Would a senior engineer reading official docs agree the option at index correctAnswer is the ONLY correct one?" If not, discard.
+- The 'explanation' MUST explicitly restate the correct option's text AND justify why it is correct AND why each other option is wrong. This forces self-consistency between correctAnswer and explanation.
 
-## Output Format
+## Question quality
+- Practical, real-world knowledge — not trivia.
+- Basic: fundamental syntax/concepts. Intermediate: practical application. Advanced: edge cases, internals, architectural trade-offs.
+- Cover different aspects of each skill (no near-duplicates).
 
-Return ONLY a valid JSON array (no markdown, no extra text):
-[
-  {
-    "skill": "React",
-    "difficulty": "Intermediate",
-    "question": "What is the primary purpose of React's useCallback hook?",
-    "options": [
-      "To memoize a callback function to prevent unnecessary re-renders",
-      "To create a new callback on every render for fresh closure values",
-      "To replace the need for useEffect in event handlers",
-      "To automatically debounce function calls"
-    ],
-    "correctAnswer": 0,
-    "explanation": "useCallback memoizes a callback function so it maintains the same reference between renders, preventing unnecessary re-renders of child components that receive it as a prop."
-  }
-]`;
+Return ONLY a JSON object matching the required schema. No prose, no markdown.`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const jsonSchema = {
+      name: 'assessment_questions',
+      strict: true,
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          questions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                skill: { type: 'string' },
+                difficulty: { type: 'string', enum: ['Basic', 'Intermediate', 'Advanced'] },
+                question: { type: 'string' },
+                options: { type: 'array', items: { type: 'string' } },
+                correctAnswer: { type: 'integer' },
+                correctAnswerText: { type: 'string' },
+                explanation: { type: 'string' },
+              },
+              required: ['skill', 'difficulty', 'question', 'options', 'correctAnswer', 'correctAnswerText', 'explanation'],
+            },
+          },
+        },
+        required: ['questions'],
+      },
+    };
+
+    const callGateway = async (body: unknown) => fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate the assessment questions now for the skills listed above. Return ONLY a valid JSON array, no prose.` }
-        ],
-        temperature: 0.6,
-        max_tokens: 16000,
-      }),
+      body: JSON.stringify(body),
+    });
+
+    const response = await callGateway({
+      model: 'google/gemini-3-flash-preview',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Generate the assessment questions now for the skills listed above.` }
+      ],
+      temperature: 0.3,
+      max_tokens: 16000,
+      response_format: { type: 'json_schema', json_schema: jsonSchema },
     });
 
     if (!response.ok) {
@@ -196,99 +216,161 @@ Return ONLY a valid JSON array (no markdown, no extra text):
       );
     }
 
-    let questions;
+    let questions: any[];
     try {
-      // Strip markdown code fences if present
-      let jsonStr = content;
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[1];
-      }
-      jsonStr = jsonStr.trim();
-      
-      // Find the outermost JSON array by matching brackets
-      const startIdx = jsonStr.indexOf('[');
-      if (startIdx === -1) throw new Error('No JSON array found');
-      
-      let depth = 0;
-      let endIdx = -1;
-      for (let i = startIdx; i < jsonStr.length; i++) {
-        if (jsonStr[i] === '[') depth++;
-        else if (jsonStr[i] === ']') {
-          depth--;
-          if (depth === 0) { endIdx = i; break; }
-        }
-      }
-      
-      if (endIdx === -1) {
-        // Array wasn't closed - try to fix by finding last complete object and closing
-        const lastObjEnd = jsonStr.lastIndexOf('}');
-        if (lastObjEnd > startIdx) {
-          jsonStr = jsonStr.substring(startIdx, lastObjEnd + 1) + ']';
-        } else {
-          throw new Error('Cannot find valid JSON array');
-        }
-      } else {
-        jsonStr = jsonStr.substring(startIdx, endIdx + 1);
-      }
-      
+      let parsed: any;
       try {
-        questions = JSON.parse(jsonStr);
-      } catch (_e) {
-        // Fallback: extract individual complete objects by brace matching
-        console.warn('Array parse failed, extracting objects individually');
-        const objs: any[] = [];
-        let d = 0, objStart = -1, inStr = false, esc = false;
-        for (let i = 0; i < jsonStr.length; i++) {
-          const c = jsonStr[i];
-          if (inStr) {
-            if (esc) esc = false;
-            else if (c === '\\') esc = true;
-            else if (c === '"') inStr = false;
-            continue;
-          }
-          if (c === '"') { inStr = true; continue; }
-          if (c === '{') { if (d === 0) objStart = i; d++; }
-          else if (c === '}') {
-            d--;
-            if (d === 0 && objStart !== -1) {
-              try { objs.push(JSON.parse(jsonStr.substring(objStart, i + 1))); } catch (_) {}
-              objStart = -1;
-            }
-          }
-        }
-        questions = objs;
+        parsed = JSON.parse(content);
+      } catch {
+        // Fallback: strip fences / extract JSON object or array
+        let jsonStr = content;
+        const fence = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (fence) jsonStr = fence[1];
+        jsonStr = jsonStr.trim();
+        const objStart = jsonStr.indexOf('{');
+        const arrStart = jsonStr.indexOf('[');
+        const start = (objStart !== -1 && (arrStart === -1 || objStart < arrStart)) ? objStart : arrStart;
+        if (start === -1) throw new Error('No JSON found');
+        parsed = JSON.parse(jsonStr.slice(start));
       }
 
-      if (!Array.isArray(questions)) {
-        throw new Error('Response is not an array');
-      }
-      
-      // Add IDs and validate structure
-      questions = questions
-        .filter((q: any) => q.question && q.options && Array.isArray(q.options) && q.options.length === 4)
-        .map((q: any, index: number) => ({
-          id: index + 1,
-          skill: q.skill || 'General',
-          difficulty: q.difficulty || 'Intermediate',
+      const raw: any[] = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.questions) ? parsed.questions : []);
+
+      // Validation: enforce structural + self-consistency (correctAnswer index matches correctAnswerText)
+      questions = raw
+        .filter((q: any) => {
+          if (!q?.question || !Array.isArray(q?.options) || q.options.length !== 4) return false;
+          if (typeof q.correctAnswer !== 'number' || q.correctAnswer < 0 || q.correctAnswer > 3) return false;
+          if (!q.explanation || typeof q.explanation !== 'string') return false;
+          // Self-consistency: if correctAnswerText provided, it must match option at correctAnswer index
+          if (typeof q.correctAnswerText === 'string' && q.correctAnswerText.trim()) {
+            const opt = String(q.options[q.correctAnswer] || '').trim().toLowerCase();
+            const txt = q.correctAnswerText.trim().toLowerCase();
+            // Try to auto-correct: find option matching correctAnswerText
+            if (opt !== txt) {
+              const idx = q.options.findIndex((o: string) => String(o).trim().toLowerCase() === txt);
+              if (idx !== -1) {
+                q.correctAnswer = idx;
+              } else {
+                console.warn('Dropping question with inconsistent correctAnswer/correctAnswerText:', q.question);
+                return false;
+              }
+            }
+          }
+          return true;
+        });
+
+      if (questions.length === 0) throw new Error('No valid questions generated');
+
+      // ===== Verification Pass: Senior Technical Interviewer review =====
+      try {
+        const reviewSchema = {
+          name: 'question_review',
+          strict: true,
+          schema: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              reviews: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  properties: {
+                    id: { type: 'integer' },
+                    verdict: { type: 'string', enum: ['keep', 'fix', 'drop'] },
+                    correctedAnswer: { type: 'integer' },
+                    reason: { type: 'string' },
+                  },
+                  required: ['id', 'verdict', 'correctedAnswer', 'reason'],
+                },
+              },
+            },
+            required: ['reviews'],
+          },
+        };
+
+        const forReview = questions.map((q, i) => ({
+          id: i,
+          skill: q.skill,
           question: q.question,
           options: q.options,
-          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
-          explanation: q.explanation || '',
+          claimedCorrectAnswer: q.correctAnswer,
+          claimedCorrectText: q.options[q.correctAnswer],
+          explanation: q.explanation,
         }));
-      
-      console.log('Generated', questions.length, 'valid questions');
-      
-      if (questions.length === 0) {
-        throw new Error('No valid questions generated');
+
+        const reviewResp = await callGateway({
+          model: 'google/gemini-3-flash-preview',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a Senior Technical Interviewer auditing multiple-choice questions for factual correctness against official developer documentation.
+
+For each question, decide:
+- "keep": the claimedCorrectAnswer index is unambiguously correct per official docs and the explanation is factually sound.
+- "fix": the question is well-formed but the claimedCorrectAnswer index is wrong; provide the correct index in correctedAnswer.
+- "drop": the question is ambiguous, has multiple correct answers, no correct answer, is factually confused, or you are not 100% certain of the right answer.
+
+Set correctedAnswer to the current claimedCorrectAnswer when verdict is "keep" or "drop". Be strict — when in doubt, drop.`,
+            },
+            { role: 'user', content: JSON.stringify({ questions: forReview }) },
+          ],
+          temperature: 0,
+          max_tokens: 8000,
+          response_format: { type: 'json_schema', json_schema: reviewSchema },
+        });
+
+        if (reviewResp.ok) {
+          const reviewData = await reviewResp.json();
+          const reviewContent = reviewData.choices?.[0]?.message?.content;
+          if (reviewContent) {
+            const reviewParsed = JSON.parse(reviewContent);
+            const reviews: any[] = Array.isArray(reviewParsed?.reviews) ? reviewParsed.reviews : [];
+            const byId = new Map<number, any>();
+            for (const r of reviews) byId.set(r.id, r);
+            const before = questions.length;
+            questions = questions
+              .map((q, i) => {
+                const r = byId.get(i);
+                if (!r) return q;
+                if (r.verdict === 'drop') return null;
+                if (r.verdict === 'fix' && typeof r.correctedAnswer === 'number' && r.correctedAnswer >= 0 && r.correctedAnswer < 4) {
+                  return { ...q, correctAnswer: r.correctedAnswer };
+                }
+                return q;
+              })
+              .filter(Boolean) as any[];
+            console.log(`Verification pass: kept ${questions.length}/${before} questions`);
+          }
+        } else {
+          console.warn('Verification pass failed, using unverified questions:', reviewResp.status);
+        }
+      } catch (verErr) {
+        console.warn('Verification pass error, using unverified questions:', verErr);
       }
+
+      if (questions.length === 0) throw new Error('No questions survived verification');
+
+      questions = questions.map((q: any, index: number) => ({
+        id: index + 1,
+        skill: q.skill || 'General',
+        difficulty: q.difficulty || 'Intermediate',
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation || '',
+      }));
+
+      console.log('Final', questions.length, 'validated questions');
     } catch (parseError) {
-      console.error('Failed to parse questions:', parseError, 'Content:', content.substring(0, 500));
+      console.error('Failed to parse questions:', parseError, 'Content:', String(content).substring(0, 500));
       return new Response(
         JSON.stringify({ error: 'Failed to parse questions. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
 
     return new Response(
       JSON.stringify({ success: true, questions }),
