@@ -200,7 +200,7 @@ const Auth = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`pl-10 pr-10 ${errors.password ? 'border-destructive' : ''}`}
+                  className={`pl-10 pr-10 rounded-none ${errors.password ? 'border-destructive' : ''}`}
                   disabled={isSubmitting}
                 />
                 <button
