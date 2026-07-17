@@ -576,9 +576,10 @@ serve(async (req) => {
       const collected: any[] = [];
 
       await Promise.all(queriesToRun.map(async ({ query, weight }) => {
+        const randomPage = String(1 + Math.floor(Math.random() * 3));
         const params = new URLSearchParams({
           query,
-          page: '1',
+          page: randomPage,
           num_pages: '1',
           date_posted: 'week',
         });
@@ -651,7 +652,7 @@ serve(async (req) => {
       });
 
       // Keep more candidates now that we search across many roles.
-      const candidates = deduped.sort((a, b) => b.match - a.match).slice(0, 40);
+      const candidates = deduped.sort((a, b) => (b.match + Math.random() * 6) - (a.match + Math.random() * 6)).slice(0, 40);
       const aliveFlags = await Promise.all(candidates.map(j => isLinkAlive(j.url)));
       liveJobs = candidates
         .filter((_, i) => aliveFlags[i])
@@ -699,7 +700,7 @@ serve(async (req) => {
         seen.add(key);
         return true;
       });
-      const candidates = deduped.sort((a, b) => b.match - a.match).slice(0, 40);
+      const candidates = deduped.sort((a, b) => (b.match + Math.random() * 6) - (a.match + Math.random() * 6)).slice(0, 40);
       const aliveFlags = await Promise.all(candidates.map(j => isLinkAlive(j.url)));
       liveJobs = candidates
         .filter((_, i) => aliveFlags[i])
@@ -732,7 +733,7 @@ serve(async (req) => {
     const buckets = new Map<string, any[]>();
     for (const r of roleOrder) buckets.set(r, []);
     buckets.set('__other__', []);
-    for (const j of liveJobs.sort((a: any, b: any) => (b.match || 0) - (a.match || 0))) {
+    for (const j of liveJobs.sort((a: any, b: any) => ((b.match || 0) + Math.random() * 6) - ((a.match || 0) + Math.random() * 6))) {
       const key = roleOrder.includes(j._forRole) ? j._forRole : '__other__';
       buckets.get(key)!.push(j);
     }
