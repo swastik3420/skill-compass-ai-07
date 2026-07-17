@@ -79,7 +79,7 @@ const SkillGapAnalysis = ({ results, parsedResume }: Props) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.55 }}
-      className="bg-card rounded-2xl shadow-lg p-6"
+      className="bg-card rounded-none shadow-lg p-6"
     >
       <div className="flex items-center gap-3 mb-2">
         <Target className="w-6 h-6 text-secondary" />

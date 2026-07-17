@@ -130,7 +130,7 @@ const SalaryInsights = ({ results, parsedResume }: Props) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card rounded-2xl shadow-lg p-6"
+      className="bg-card rounded-none shadow-lg p-6"
     >
       <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
         <div className="flex items-center gap-3">
