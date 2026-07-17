@@ -233,7 +233,7 @@ const Auth = () => {
               type="submit" 
               variant="hero" 
               size="lg" 
-              className="w-full"
+              className="w-full rounded-none"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
