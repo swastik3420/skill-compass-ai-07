@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { Upload, FileText, X, Loader2, CheckCircle2, AlertCircle, XCircle, AlertTriangle, Sparkles } from "lucide-react";
+import { Upload, FileText, X, Loader2, CheckCircle2, AlertCircle, XCircle, AlertTriangle, Sparkles, Download } from "lucide-react";
+import jsPDF from "jspdf";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
