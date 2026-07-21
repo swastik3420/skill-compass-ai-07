@@ -193,13 +193,6 @@ serve(async (req) => {
       );
     }
 
-    // Build a candidate pool: for each skill, produce its templates (bank or generic).
-    const pool: { skill: string; template: QTemplate }[] = [];
-    for (const s of skillList) {
-      const templates = lookupBank(s.name) ?? genericTemplates(s.name);
-      for (const t of templates) pool.push({ skill: s.name, template: t });
-    }
-
     // Shuffle helper
     const shuffle = <T,>(arr: T[]): T[] => {
       const a = [...arr];
@@ -210,53 +203,67 @@ serve(async (req) => {
       return a;
     };
 
-    // Target counts per difficulty
-    const basicTarget = Math.ceil(totalQuestions / 3);
-    const intermediateTarget = Math.ceil(totalQuestions / 3);
-    const advancedTarget = totalQuestions - basicTarget - intermediateTarget;
+    const DIFFS: Difficulty[] = ['Basic', 'Intermediate', 'Advanced'];
 
-    const buckets: Record<Difficulty, { skill: string; template: QTemplate }[]> = {
-      Basic: shuffle(pool.filter(p => p.template.difficulty === 'Basic')),
-      Intermediate: shuffle(pool.filter(p => p.template.difficulty === 'Intermediate')),
-      Advanced: shuffle(pool.filter(p => p.template.difficulty === 'Advanced')),
-    };
-
-    const pickFromBucket = (bucket: { skill: string; template: QTemplate }[], n: number, usedSkills: Set<string>) => {
-      const picked: { skill: string; template: QTemplate }[] = [];
-      // First pass: prefer unused skills for coverage
-      for (const item of bucket) {
-        if (picked.length >= n) break;
-        if (!usedSkills.has(item.skill.toLowerCase())) {
-          picked.push(item);
-          usedSkills.add(item.skill.toLowerCase());
-        }
+    // For each skill, build a per-difficulty template pool.
+    // If a skill's bank lacks a difficulty, fall back to the generic template
+    // for that difficulty so every skill can contribute at every level.
+    const perSkill: Record<string, Record<Difficulty, QTemplate[]>> = {};
+    for (const s of skillList) {
+      const bank = lookupBank(s.name) ?? genericTemplates(s.name);
+      const generic = genericTemplates(s.name);
+      const map: Record<Difficulty, QTemplate[]> = { Basic: [], Intermediate: [], Advanced: [] };
+      for (const d of DIFFS) {
+        const fromBank = bank.filter(t => t.difficulty === d);
+        map[d] = fromBank.length > 0 ? shuffle(fromBank) : generic.filter(t => t.difficulty === d);
       }
-      // Second pass: fill remainder
-      for (const item of bucket) {
-        if (picked.length >= n) break;
-        if (!picked.includes(item)) picked.push(item);
-      }
-      return picked;
-    };
-
-    const usedSkills = new Set<string>();
-    let selected = [
-      ...pickFromBucket(buckets.Basic, basicTarget, usedSkills),
-      ...pickFromBucket(buckets.Intermediate, intermediateTarget, usedSkills),
-      ...pickFromBucket(buckets.Advanced, advancedTarget, usedSkills),
-    ];
-
-    // If we still don't have enough (small skill set), backfill from any remaining
-    if (selected.length < totalQuestions) {
-      const remaining = shuffle(pool.filter(p => !selected.includes(p)));
-      for (const item of remaining) {
-        if (selected.length >= totalQuestions) break;
-        selected.push(item);
-      }
+      perSkill[s.name] = map;
     }
 
-    // Cap and shape final questions
-    selected = selected.slice(0, totalQuestions);
+    // Target counts per difficulty. For a 30-question full assessment this is 10/10/10.
+    const basicTarget = Math.ceil(totalQuestions / 3);
+    const remainderAfterBasic = totalQuestions - basicTarget;
+    const intermediateTarget = Math.ceil(remainderAfterBasic / 2);
+    const advancedTarget = totalQuestions - basicTarget - intermediateTarget;
+    const targets: Record<Difficulty, number> = {
+      Basic: basicTarget,
+      Intermediate: intermediateTarget,
+      Advanced: advancedTarget,
+    };
+
+    // Round-robin pick per difficulty: each skill gets a slot before any skill
+    // repeats. Guarantees every scanned skill is assessed when skill count
+    // <= target; when skill count > target we still cover a distinct subset
+    // per bucket by rotating the starting skill.
+    const skillOrder = skillList.map(s => s.name);
+    const buckets: Record<Difficulty, { skill: string; template: QTemplate }[]> = {
+      Basic: [], Intermediate: [], Advanced: [],
+    };
+
+    DIFFS.forEach((d, di) => {
+      const target = targets[d];
+      // Rotate skill order per difficulty so different skills lead each bucket
+      const rotated = [...skillOrder.slice(di % skillOrder.length), ...skillOrder.slice(0, di % skillOrder.length)];
+      const cursors: Record<string, number> = {};
+      let round = 0;
+      while (buckets[d].length < target && round < 50) {
+        let addedThisRound = 0;
+        for (const skill of rotated) {
+          if (buckets[d].length >= target) break;
+          const templates = perSkill[skill][d];
+          if (!templates || templates.length === 0) continue;
+          const idx = (cursors[skill] ?? 0) % templates.length;
+          buckets[d].push({ skill, template: templates[idx] });
+          cursors[skill] = (cursors[skill] ?? 0) + 1;
+          addedThisRound++;
+        }
+        if (addedThisRound === 0) break; // no skill has templates for this difficulty
+        round++;
+      }
+    });
+
+    // Final ordered list: all Basic, then all Intermediate, then all Advanced.
+    const selected = [...buckets.Basic, ...buckets.Intermediate, ...buckets.Advanced];
 
     const questions = selected.map((item, index) => ({
       id: index + 1,
@@ -268,7 +275,8 @@ serve(async (req) => {
       explanation: item.template.explanation,
     }));
 
-    console.log(`Generated ${questions.length} questions locally for ${skillList.length} skills`);
+    console.log(`Generated ${questions.length} questions (B:${buckets.Basic.length} I:${buckets.Intermediate.length} A:${buckets.Advanced.length}) across ${skillList.length} skills`);
+
 
     return new Response(
       JSON.stringify({ success: true, questions }),
