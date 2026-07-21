@@ -18,9 +18,9 @@ interface GeneratedQuestion {
   explanation: string;
 }
 
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-const GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
-const MODEL = 'google/gemini-2.5-flash';
+const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+const MODEL = 'gemini-2.5-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 function buildSystemPrompt(): string {
   return `You are a Senior Principal Engineer and Technical Interviewer designing a high-signal MCQ assessment.
@@ -74,20 +74,16 @@ Return JSON in this exact shape (no markdown, no prose, no trailing text):
 }
 
 async function callGemini(system: string, user: string): Promise<any> {
-  const res = await fetch(GATEWAY_URL, {
+  const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [{ role: 'user', parts: [{ text: user }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.7,
+      },
     }),
   });
 
@@ -95,19 +91,17 @@ async function callGemini(system: string, user: string): Promise<any> {
     const body = await res.text();
     throw new Response(
       JSON.stringify({
-        error: res.status === 402
-          ? 'AI credits exhausted. Please add credits to continue.'
-          : res.status === 429
-          ? 'Rate limited. Please retry shortly.'
-          : `AI gateway error: ${body}`,
+        error: res.status === 429
+          ? 'Gemini rate limited. Please retry shortly.'
+          : `Gemini API error (${res.status}): ${body}`,
       }),
       { status: res.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
 
   const data = await res.json();
-  const content = data?.choices?.[0]?.message?.content;
-  if (!content) throw new Error('Empty AI response');
+  const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!content) throw new Error('Empty Gemini response');
   return JSON.parse(content);
 }
 
@@ -166,8 +160,8 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+    if (!GEMINI_API_KEY) {
+      return new Response(JSON.stringify({ error: 'GEMINI_API_KEY not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
