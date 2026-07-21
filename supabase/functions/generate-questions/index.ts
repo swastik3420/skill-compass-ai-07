@@ -74,20 +74,16 @@ Return JSON in this exact shape (no markdown, no prose, no trailing text):
 }
 
 async function callGemini(system: string, user: string): Promise<any> {
-  const res = await fetch(GATEWAY_URL, {
+  const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [{ role: 'user', parts: [{ text: user }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.7,
+      },
     }),
   });
 
@@ -95,19 +91,17 @@ async function callGemini(system: string, user: string): Promise<any> {
     const body = await res.text();
     throw new Response(
       JSON.stringify({
-        error: res.status === 402
-          ? 'AI credits exhausted. Please add credits to continue.'
-          : res.status === 429
-          ? 'Rate limited. Please retry shortly.'
-          : `AI gateway error: ${body}`,
+        error: res.status === 429
+          ? 'Gemini rate limited. Please retry shortly.'
+          : `Gemini API error (${res.status}): ${body}`,
       }),
       { status: res.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
 
   const data = await res.json();
-  const content = data?.choices?.[0]?.message?.content;
-  if (!content) throw new Error('Empty AI response');
+  const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!content) throw new Error('Empty Gemini response');
   return JSON.parse(content);
 }
 
