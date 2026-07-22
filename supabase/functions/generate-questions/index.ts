@@ -248,12 +248,16 @@ serve(async (req) => {
 
     // Verification pass: Senior Technical Interviewer audits and fixes any weak or incorrect items.
     if (questions.length > 0) {
-      const auditSystem = `You are a Senior Technical Interviewer auditing an MCQ set for correctness and rigor.
+      const auditSystem = `You are a Senior Technical Interviewer auditing an MCQ set for correctness, rigor, and difficulty calibration.
 For each question:
 - Verify the marked correctAnswer is factually correct. If wrong, fix correctAnswer OR rewrite options so exactly one is correct.
 - Reject and rewrite any generic definition/recall question into a scenario/edge-case question at the same difficulty and skill.
-- Ensure distractors reflect real misconceptions, not filler.
-- Ensure the explanation defends the correct answer and refutes distractors.
+- Enforce the difficulty tier strictly:
+  * Basic must test fundamentals, syntax, defaults, and daily usage with no deep edge cases or architectural trade-offs. Distractors must be standard syntax/logic mistakes.
+  * Intermediate must test practical application, error handling, real-world trade-offs between two options, design patterns, and moderate performance. Distractors must be plausible anti-patterns or subtle interaction errors.
+  * Advanced must test deep architecture, internals, high-concurrency/edge cases, scale trade-offs, and subtle anti-patterns. Distractors must be sophisticated misconceptions that experienced engineers could hold.
+- If a question is miscalibrated (too hard or too easy for its labeled difficulty), rewrite it to fit the tier.
+- Ensure explanations defend the correct answer and refute distractors clearly.
 Return the FULL corrected set as JSON in the same schema.`;
       const auditUser = `Audit and return the corrected set as JSON:
 {"questions": ${JSON.stringify(questions.map(q => ({
