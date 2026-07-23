@@ -305,6 +305,8 @@ Return the FULL corrected set as JSON in the same schema.`;
       });
     }
 
+    questions = shuffleAnswers(questions);
+
     console.log(`Generated ${questions.length}/${totalQuestions} questions across ${skillNames.length} skills`);
 
     return new Response(JSON.stringify({ success: true, questions }), {
