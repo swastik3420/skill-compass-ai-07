@@ -259,10 +259,10 @@ serve(async (req) => {
       const auditSystem = `You are a Senior Technical Interviewer auditing an MCQ set for correctness, rigor, and difficulty calibration.
 For each question:
 - Verify the marked correctAnswer is factually correct. If wrong, fix correctAnswer OR rewrite options so exactly one is correct.
-- Reject and rewrite any generic definition/recall question into a scenario/edge-case question at the same difficulty and skill.
+- Reject and rewrite any generic definition/recall question at INTERMEDIATE or ADVANCED tiers into a scenario/edge-case question at the same difficulty and skill. Do NOT rewrite Basic definition questions — those are correct for the tier.
 - Enforce the difficulty tier strictly:
-  * Basic must test fundamentals, syntax, defaults, and daily usage with no deep edge cases or architectural trade-offs. Distractors must be standard syntax/logic mistakes.
-  * Intermediate must test practical application, error handling, real-world trade-offs between two options, design patterns, and moderate performance. Distractors must be plausible anti-patterns or subtle interaction errors.
+  * Basic must be BEGINNER-only: fundamental definitions, terminology, keyword recognition, single-concept recall. NO scenarios, NO multi-line code, NO edge cases, NO trade-offs. If a Basic question is too complex for someone who just finished an intro tutorial, simplify it into a definition/recognition question. Distractors must be wrong keywords, confused terminology, or mixed-up basic concepts.
+  * Intermediate must match a standard 1-3 year developer interview: practical day-to-day usage, common real-world edge cases devs actually hit, standard best practices, idiomatic patterns, straightforward debugging. Not trivia, not deep internals. Distractors must be plausible anti-patterns or "sounds right but subtly wrong" answers.
   * Advanced must test deep architecture, internals, high-concurrency/edge cases, scale trade-offs, and subtle anti-patterns. Distractors must be sophisticated misconceptions that experienced engineers could hold.
 - If a question is miscalibrated (too hard or too easy for its labeled difficulty), rewrite it to fit the tier.
 - Ensure explanations defend the correct answer and refute distractors clearly.
