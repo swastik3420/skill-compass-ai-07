@@ -48,8 +48,8 @@ ADVANCED (Difficulty 5):
 - Distractors must be sophisticated: common misconceptions that even experienced engineers hold, or solutions that work in small cases but fail at scale or under concurrency.
 
 STRICT RULES — every question MUST comply:
-1. NEVER ask generic definition/recall questions. Ban "What is X?", "Define Y", "What does Z stand for?", "Which of these is X?", or any question answerable by reading a one-line docs blurb. However, Basic questions must remain accessible to a beginner or junior developer.
-2. Every question MUST be scenario-driven: a real engineering trade-off, a debugging situation, a performance/scaling bottleneck, an architectural decision, a subtle language/tool mechanic, an edge case, or a "why X over Y under constraint Z" comparison.
+1. For INTERMEDIATE and ADVANCED tiers only: avoid generic definition/recall questions. Ban "What is X?", "Define Y", "What does Z stand for?" at those tiers. BASIC tier is EXEMPT — definition/recall/terminology questions are the required style for Basic.
+2. INTERMEDIATE and ADVANCED questions MUST be scenario-driven: a real engineering trade-off, debugging situation, performance/scaling bottleneck, architectural decision, subtle language/tool mechanic, edge case, or "why X over Y under constraint Z" comparison. BASIC questions must stay simple recall/recognition — no scenarios.
 3. Distractors MUST be plausible and tier-appropriate. Basic distractors = syntax/logic mistakes; Intermediate distractors = anti-patterns and subtle interactions; Advanced distractors = scale/concurrency/misconceptions.
 4. Exactly 4 options. Exactly one unambiguously correct answer. correctAnswer is the 0-based index.
 5. The explanation MUST justify why the correct answer is right AND briefly say why each notable distractor is wrong / what misconception it targets.
