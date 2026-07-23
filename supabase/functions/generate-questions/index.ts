@@ -77,8 +77,8 @@ Slots:
 ${planLines}
 
 Difficulty calibration reminder:
-- Basic slots: fundamentals, syntax, defaults, daily usage. No tricks or deep edge cases.
-- Intermediate slots: practical application, error handling, real-world trade-offs, design patterns, moderate performance.
+- Basic slots: BEGINNER-only. Simple definitions, terminology, keyword recognition, "what is X" / "which keyword does Y". No scenarios, no code logic, no edge cases.
+- Intermediate slots: STANDARD 1-3 year dev interview level. Practical day-to-day usage, common real-world edge cases, standard best practices, idiomatic patterns, straightforward debugging. Bridge between Basic and Advanced.
 - Advanced slots: deep architecture, internals, high-concurrency/edge cases, scale trade-offs, subtle anti-patterns.
 
 Return JSON in this exact shape (no markdown, no prose, no trailing text):
