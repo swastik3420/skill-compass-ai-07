@@ -27,17 +27,20 @@ function buildSystemPrompt(): string {
 
 DIFFICULTY CALIBRATION — each question MUST match its assigned tier exactly. Do not leak hard edge cases into Basic slots, and do not waste Advanced slots on trivia.
 
-BASIC (Difficulty 1-2):
-- Focus strictly on fundamental concepts, standard syntax, default behaviors, and daily usage.
-- Test core understanding: "What happens when you run this common code?", "Which API is the standard/default choice for this everyday task?", "What is the correct syntax for this basic pattern?"
-- NO trick scenarios, NO deep edge cases, NO architectural trade-offs, NO performance optimization dilemmas.
-- Distractors must reflect standard syntax errors, common logic mistakes, or misremembered defaults — the kinds of mistakes a junior developer actually makes.
+BASIC (Difficulty 1-2) — BEGINNER / ENTRY-LEVEL ONLY:
+- Test fundamental definitions, core concepts, basic terminology, and keyword/syntax recognition ONLY.
+- Simple recall and recognition questions are ENCOURAGED at this tier: "What is X?", "Which keyword is used for Y?", "What does Z do?", "Which of these is a valid A?" are all acceptable and expected.
+- NO multi-step scenarios. NO edge cases. NO complex or multi-line code snippets (a single short line is OK). NO trade-off analysis. NO debugging scenarios. NO performance discussions.
+- Target audience: someone who just finished a beginner tutorial or intro course. If a junior dev with 0-6 months experience would struggle, it does NOT belong in Basic.
+- Distractors must be obvious-to-an-expert but plausible-to-a-beginner: wrong keywords, wrong syntax, confused terminology, or mixing up two similar basic concepts.
 
-INTERMEDIATE (Difficulty 3-4):
-- Focus on practical application, standard error handling, and real-world trade-offs between two reasonable options.
-- Include common design patterns, moderate performance optimization, multi-feature interactions, and debugging scenarios that require connecting two concepts.
-- Distractors should represent plausible anti-patterns, off-by-one mistakes, ordering issues, or "sounds right but subtly wrong" reasoning.
-- Avoid internals, deep engine mechanics, or large-scale distributed-system edge cases.
+INTERMEDIATE (Difficulty 3-4) — STANDARD 1-3 YEAR DEVELOPER INTERVIEW:
+- Calibrate to what a typical 1-3 year developer is expected to know in a standard industry interview.
+- Focus on practical day-to-day usage, common real-world edge cases developers actually hit, standard best practices, and idiomatic patterns.
+- Include: correct API/method choice for a common task, standard error handling, common pitfalls (null/undefined, async ordering, off-by-one), typical design patterns, straightforward debugging.
+- Should cleanly bridge Basic (definitions) and Advanced (deep internals/scale). Not trivia, not architecture.
+- Distractors should be plausible anti-patterns, "sounds right but subtly wrong" answers, or the mistake a dev makes before learning the idiomatic approach.
+- Avoid deep internals, framework source-level mechanics, distributed-systems edge cases, or high-concurrency scenarios — those belong in Advanced.
 
 ADVANCED (Difficulty 5):
 - Reserved strictly for deep architecture, internal mechanics, high-concurrency/edge cases, complex scale trade-offs, and subtle anti-patterns.
