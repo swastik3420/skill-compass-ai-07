@@ -98,54 +98,60 @@ Return JSON in this exact shape (no markdown, no prose, no trailing text):
 }
 
 async function callGemini(system: string, user: string): Promise<any> {
-  const maxAttempts = 4;
   let lastStatus = 0;
   let lastBody = '';
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: 'user', parts: [{ text: user }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.7,
-        },
-      }),
-    });
+  for (let m = 0; m < MODEL_FALLBACKS.length; m++) {
+    const model = MODEL_FALLBACKS[m];
+    const maxAttempts = 3;
 
-    if (res.ok) {
-      const data = await res.json();
-      const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!content) throw new Error('Empty Gemini response');
-      return safeParseJson(content);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const res = await fetch(`${geminiUrl(model)}?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: 'user', parts: [{ text: user }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.7,
+          },
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!content) throw new Error('Empty Gemini response');
+        return safeParseJson(content);
+      }
+
+      lastStatus = res.status;
+      lastBody = await res.text();
+
+      const transient = res.status === 503 || res.status === 429 || res.status === 500;
+      if (!transient) break; // non-retryable: fail fast
+
+      if (attempt < maxAttempts) {
+        const delay = Math.min(6000, 700 * Math.pow(2, attempt - 1)) + Math.random() * 400;
+        await new Promise((r) => setTimeout(r, delay));
+      }
     }
-
-    lastStatus = res.status;
-    lastBody = await res.text();
-
-    // Retry on transient errors
-    if ((res.status === 503 || res.status === 429 || res.status === 500) && attempt < maxAttempts) {
-      const delay = Math.min(8000, 800 * Math.pow(2, attempt - 1)) + Math.random() * 400;
-      await new Promise((r) => setTimeout(r, delay));
-      continue;
-    }
-    break;
+    // After exhausting attempts on this model for a transient error, fall through to next model
   }
 
   throw new Response(
     JSON.stringify({
       error: lastStatus === 429
-        ? 'Gemini rate limited. Please retry shortly.'
+        ? 'Gemini is rate limited across fallback models. Please retry in a minute.'
         : lastStatus === 503
-        ? 'Gemini is temporarily overloaded. Please try again in a moment.'
+        ? 'Gemini is temporarily overloaded. Please try again shortly.'
         : `Gemini API error (${lastStatus}): ${lastBody}`,
     }),
-    { status: lastStatus === 503 ? 503 : lastStatus, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    { status: lastStatus || 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
   );
 }
+
 
 
 function safeParseJson(raw: string): any {
