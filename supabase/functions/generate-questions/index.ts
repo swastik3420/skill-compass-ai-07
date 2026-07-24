@@ -97,35 +97,51 @@ Return JSON in this exact shape (no markdown, no prose, no trailing text):
 }
 
 async function callGemini(system: string, user: string): Promise<any> {
-  const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: 'user', parts: [{ text: user }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.7,
-      },
-    }),
-  });
+  const maxAttempts = 4;
+  let lastStatus = 0;
+  let lastBody = '';
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Response(
-      JSON.stringify({
-        error: res.status === 429
-          ? 'Gemini rate limited. Please retry shortly.'
-          : `Gemini API error (${res.status}): ${body}`,
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: user }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.7,
+        },
       }),
-      { status: res.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!content) throw new Error('Empty Gemini response');
+      return safeParseJson(content);
+    }
+
+    lastStatus = res.status;
+    lastBody = await res.text();
+
+    if ((res.status === 429 || res.status === 503) && attempt < maxAttempts - 1) {
+      const delay = 800 * Math.pow(2, attempt) + Math.floor(Math.random() * 400);
+      console.warn(`Gemini ${res.status}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxAttempts})`);
+      await new Promise((r) => setTimeout(r, delay));
+      continue;
+    }
+    break;
   }
 
-  const data = await res.json();
-  const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!content) throw new Error('Empty Gemini response');
-  return safeParseJson(content);
+  throw new Response(
+    JSON.stringify({
+      error: lastStatus === 429
+        ? 'Gemini rate limited. Please retry shortly.'
+        : `Gemini API error (${lastStatus}): ${lastBody}`,
+    }),
+    { status: lastStatus || 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+  );
 }
 
 function safeParseJson(raw: string): any {
